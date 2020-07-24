@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace Wurstmineberg
         public void Display()
         {
             ni.MouseClick += new MouseEventHandler(ni_MouseClick);
-            ni.Text = "Wurstmineberg"; //TODO show number of online users in tooltip?
+            ni.Text = "Wurstmineberg";
             Update();
 
             Timer timer = new Timer();
@@ -50,11 +51,11 @@ namespace Wurstmineberg
 
         private void Update()
         {
-            JsonElement people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json"));
+            JsonElement people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
             JsonElement status = GetJson(new Uri("https://wurstmineberg.de/api/v3/world/wurstmineberg/status.json"));
 
             ni.Icon = Resources.wurstpick_white; //TODO use wurstpick_black if taskbar uses light theme
-            ni.ContextMenuStrip = new ContextMenus().Create(people.GetProperty("people"), status);
+            ni.ContextMenuStrip = new ContextMenus().Create(people, status);
             if (!status.GetProperty("running").GetBoolean())
             {
                 //TODO showIfOffline config
@@ -74,6 +75,31 @@ namespace Wurstmineberg
                 else
                 {
                     ni.Visible = true;
+                    if (list.GetArrayLength() == 1)
+                    {
+                        JsonElement uid = Enumerable.Single<JsonElement>(list.EnumerateArray());
+                        String uidString = uid.ToString();
+                        JsonElement person;
+                        if (!people.TryGetProperty(uidString, out person))
+                        {
+                            person = JsonDocument.Parse("{}", new JsonDocumentOptions { }).RootElement;
+                        }
+                        JsonElement displayNameJson;
+                        String displayName;
+                        if (person.TryGetProperty("name", out displayNameJson))
+                        {
+                            displayName = displayNameJson.GetString();
+                        }
+                        else
+                        {
+                            displayName = uidString;
+                        }
+                        ni.Text = $"{displayName} is online";
+                    }
+                    else
+                    {
+                        ni.Text = $"{list.GetArrayLength()} players are online";
+                    }
                 }
             }
         }
