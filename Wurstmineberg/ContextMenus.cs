@@ -20,7 +20,7 @@ namespace Wurstmineberg
             // version link (TODO respect versionLink config)
             item = new ToolStripMenuItem($"Version: {status.GetProperty("version").GetString()}");
             item.Click += new EventHandler((sender, e) => {
-                Process.Start($"https://minecraft.gamepedia.com/{status.GetProperty("version").GetString()}");
+                Process.Start($"https://minecraft.gamepedia.com/Java_Edition_{status.GetProperty("version").GetString()}");
             });
             menu.Items.Add(item);
 
