@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -73,6 +74,17 @@ namespace Wurstmineberg
             item.Click += new System.EventHandler((sender, e) => {
                 Application.Exit();
             });
+            menu.Items.Add(item);
+
+            return menu;
+        }
+
+        public ContextMenuStrip FromException(HttpRequestException e)
+        {
+            ContextMenuStrip menu = new ContextMenuStrip();
+            ToolStripMenuItem item;
+
+            item = new ToolStripMenuItem($"{e}");
             menu.Items.Add(item);
 
             return menu;

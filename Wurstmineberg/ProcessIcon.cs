@@ -51,8 +51,21 @@ namespace Wurstmineberg
 
         private void Update()
         {
-            JsonElement people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
-            JsonElement status = GetJson(new Uri("https://wurstmineberg.de/api/v3/world/wurstmineberg/status.json"));
+            JsonElement people;
+            JsonElement status;
+            try
+            {
+                people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
+                status = GetJson(new Uri("https://wurstmineberg.de/api/v3/world/wurstmineberg/status.json"));
+            }
+            catch (HttpRequestException e)
+            {
+                //TODO change icon to an error icon
+                ni.ContextMenuStrip = null;
+                ni.Text = "error getting data";
+                ni.ContextMenuStrip = new ContextMenus().FromException(e);
+                return;
+            }
 
             ni.Icon = Resources.wurstpick_white; //TODO use wurstpick_black if taskbar uses light theme
             ni.ContextMenuStrip = new ContextMenus().Create(people, status);
@@ -109,7 +122,12 @@ namespace Wurstmineberg
             HttpClient client = new HttpClient();
             Task<HttpResponseMessage> responseTask = client.GetAsync(url);
             responseTask.Wait();
-            Task<Stream> bodyTask = responseTask.Result.Content.ReadAsStreamAsync();
+            HttpResponseMessage response = responseTask.Result;
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"URL {url} returned status code {response.StatusCode} {response.ReasonPhrase}");
+            }
+            Task<Stream> bodyTask = response.Content.ReadAsStreamAsync();
             bodyTask.Wait();
             return JsonDocument.Parse(bodyTask.Result, new JsonDocumentOptions { }).RootElement;
         }
