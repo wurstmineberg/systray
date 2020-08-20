@@ -75,7 +75,7 @@ namespace Wurstmineberg
             return menu;
         }
 
-        public ContextMenuStrip FromException(HttpRequestException e)
+        public ContextMenuStrip FromException(Exception e)
         {
             ContextMenuStrip menu = new ContextMenuStrip();
             ToolStripMenuItem item;

@@ -58,10 +58,11 @@ namespace Wurstmineberg
                 people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
                 status = GetJson(new Uri("https://wurstmineberg.de/api/v3/world/wurstmineberg/status.json"));
             }
-            catch (HttpRequestException e)
+            catch (Exception e)
             {
                 //TODO change icon to an error icon
                 ni.ContextMenuStrip = null;
+                ni.Visible = true;
                 ni.Text = "error getting data";
                 ni.ContextMenuStrip = new ContextMenus().FromException(e);
                 return;
