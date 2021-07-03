@@ -52,11 +52,11 @@ namespace Wurstmineberg
         private void Update()
         {
             JsonElement people;
-            JsonElement status;
+            JsonElement statuses;
             try
             {
                 people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
-                status = GetJson(new Uri("https://wurstmineberg.de/api/v3/world/wurstmineberg/status.json"));
+                statuses = GetJson(new Uri("https://wurstmineberg.de/api/v3/server/worlds.json?list"));
             }
             catch (Exception e)
             {
@@ -69,51 +69,39 @@ namespace Wurstmineberg
             }
 
             ni.Icon = Resources.wurstpick_white; //TODO use wurstpick_black if taskbar uses light theme
-            ni.ContextMenuStrip = new ContextMenus().Create(people, status);
-            if (!status.GetProperty("running").GetBoolean())
+            ni.ContextMenuStrip = new ContextMenus().Create(people, statuses);
+            if (statuses.EnumerateObject().All(property => property.Value.GetProperty("list").GetArrayLength() == 0)) //TODO respect showIfOffline and showIfEmpty configs
             {
-                //TODO showIfOffline config
                 ni.Visible = false;
             }
             else
-	        {
-                JsonElement list;
-                if (!status.TryGetProperty("list", out list))
+            {
+                ni.Visible = true;
+                int numOnline = statuses.EnumerateObject().Select((property, _) => property.Value.GetProperty("list").GetArrayLength()).Sum();
+                if (numOnline == 1)
                 {
-                    list = JsonDocument.Parse("[]", new JsonDocumentOptions { }).RootElement;
-                }
-                if (list.GetArrayLength() == 0) //TODO && showIfEmpty config isn't set to true
-                {
-                    ni.Visible = false;
-                }
-                else
-                {
-                    ni.Visible = true;
-                    if (list.GetArrayLength() == 1)
+                    JsonElement uid = Enumerable.Single<JsonElement>(statuses.EnumerateObject().SelectMany((property, _) => property.Value.GetProperty("list").EnumerateArray()));
+                    String uidString = uid.ToString();
+                    JsonElement person;
+                    if (!people.TryGetProperty(uidString, out person))
                     {
-                        JsonElement uid = Enumerable.Single<JsonElement>(list.EnumerateArray());
-                        String uidString = uid.ToString();
-                        JsonElement person;
-                        if (!people.TryGetProperty(uidString, out person))
-                        {
-                            person = JsonDocument.Parse("{}", new JsonDocumentOptions { }).RootElement;
-                        }
-                        JsonElement displayNameJson;
-                        String displayName;
-                        if (person.TryGetProperty("name", out displayNameJson))
-                        {
-                            displayName = displayNameJson.GetString();
-                        }
-                        else
-                        {
-                            displayName = uidString;
-                        }
-                        ni.Text = $"{displayName} is online";
+                        person = JsonDocument.Parse("{}", new JsonDocumentOptions { }).RootElement;
+                    }
+                    JsonElement displayNameJson;
+                    String displayName;
+                    if (person.TryGetProperty("name", out displayNameJson))
+                    {
+                        displayName = displayNameJson.GetString();
                     }
                     else
                     {
-                        ni.Text = $"{list.GetArrayLength()} players are online";
+                        displayName = uidString;
                     }
+                    ni.Text = $"{displayName} is online";
+                }
+                else
+                {
+                    ni.Text = $"{numOnline} players are online";
                 }
             }
         }

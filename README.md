@@ -11,9 +11,9 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 
 # Usage
 
-* The icon only appears as long as someone is online on the main world. You can hover over it to see how many people are online (and if it's only one player, their name).
+* The icon only appears as long as someone is online on one of our worlds. You can hover over it to see how many people are online (and if it's only one player, their name).
 * You can left-click on the icon to start Minecraft.
-* You can right-click on the icon to see the current version (with a link to the [Minecraft wiki](https://minecraft.gamepedia.com/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
+* You can right-click on the icon to see the active worlds, their current versions (each with a link to the [Minecraft wiki](https://minecraft.fandom/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
 
 # Building from source
 
