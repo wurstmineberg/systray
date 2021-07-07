@@ -15,6 +15,12 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 * You can left-click on the icon to start Minecraft.
 * You can right-click on the icon to see the active worlds, their current versions (each with a link to the [Minecraft wiki](https://minecraft.fandom/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
 
+## Configuration
+
+You can optionally configure the behavior of the app by creating a [JSON](https://json.org/) file at `%APPDATA%\Wurstmineberg\config.json`. All entries are optional:
+
+* `versionMatch`: An object mapping Minecraft launcher profile IDs to Wurstmineberg world names. Each launcher profile's selected Minecraft version will be kept in sync with the version running on that world.
+
 # Building from source
 
 If you would like to run an unreleased version, you can build it yourself:

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -51,6 +52,18 @@ namespace Wurstmineberg
 
         private void Update()
         {
+            Config config;
+            try
+            {
+                config = JsonSerializer.Deserialize<Config>(File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Wurstmineberg", "config.json")));
+            }
+            catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException)
+            {
+                config = new Config {
+                    versionMatch = new Dictionary<string, string>(),
+                };
+            }
+
             JsonElement people;
             JsonElement statuses;
             try
@@ -66,6 +79,28 @@ namespace Wurstmineberg
                 ni.Text = "error getting data";
                 ni.ContextMenuStrip = new ContextMenus().FromException(e);
                 return;
+            }
+
+            if (!(config.versionMatch is null) && config.versionMatch.Count > 0)
+            {
+                string launcherDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
+                LauncherData launcherData = JsonSerializer.Deserialize<LauncherData>(File.ReadAllText(launcherDataPath));
+                bool modified = false;
+                foreach (string profileId in config.versionMatch.Keys)
+                {
+                    string worldName = config.versionMatch[profileId];
+                    LauncherProfile launcherProfile = launcherData.profiles[profileId];
+                    string worldVersion = statuses.GetProperty(worldName).GetProperty("version").GetString();
+                    if (launcherProfile.lastVersionId != worldVersion)
+                    {
+                        launcherProfile.lastVersionId = worldVersion;
+                        modified = true;
+                    }
+                }
+                if (modified)
+                {
+                    File.WriteAllText(launcherDataPath, JsonSerializer.Serialize(launcherData, new JsonSerializerOptions { WriteIndented = true }));
+                }
             }
 
             ni.Icon = Resources.wurstpick_white; //TODO use wurstpick_black if taskbar uses light theme
