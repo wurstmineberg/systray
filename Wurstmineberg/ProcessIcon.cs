@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,17 +25,25 @@ namespace Wurstmineberg
         {
             ni.MouseClick += new MouseEventHandler(ni_MouseClick);
             ni.Text = "Wurstmineberg";
+            SetIcon();
             Update();
 
             Timer timer = new Timer();
             timer.Interval = 45 * 1000; // 45 seconds
             timer.Tick += new EventHandler(timer_Tick);
             timer.Start();
+
+            SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
         }
+
 
         public void Dispose()
         {
             ni.Dispose();
+        }
+        private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.General) SetIcon();
         }
 
         void ni_MouseClick(object sender, MouseEventArgs e)
@@ -48,6 +57,14 @@ namespace Wurstmineberg
         private void timer_Tick(object sender, EventArgs e)
         {
             Update();
+        }
+
+        private void SetIcon()
+        {
+            if ((int)Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").GetValue("SystemUsesLightTheme") == 1)
+                ni.Icon = Resources.wurstpick_black;
+            else
+                ni.Icon = Resources.wurstpick_white;
         }
 
         private void Update()
@@ -102,8 +119,6 @@ namespace Wurstmineberg
                     File.WriteAllText(launcherDataPath, JsonSerializer.Serialize(launcherData, new JsonSerializerOptions { WriteIndented = true }));
                 }
             }
-
-            ni.Icon = Resources.wurstpick_white; //TODO use wurstpick_black if taskbar uses light theme
             ni.ContextMenuStrip = new ContextMenus().Create(people, statuses);
             if (statuses.EnumerateObject().All(property => property.Value.GetProperty("list").GetArrayLength() == 0)) //TODO respect showIfOffline and showIfEmpty configs
             {

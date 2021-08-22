@@ -63,6 +63,16 @@ namespace Wurstmineberg.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
+        internal static System.Drawing.Icon wurstpick_black {
+            get {
+                object obj = ResourceManager.GetObject("wurstpick_black", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
         internal static System.Drawing.Icon wurstpick_white {
             get {
                 object obj = ResourceManager.GetObject("wurstpick_white", resourceCulture);
