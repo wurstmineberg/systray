@@ -35,14 +35,6 @@ If you would like to run an unreleased version, you can build it yourself:
 1. In [Visual Studio 2019](https://visualstudio.microsoft.com/vs/), open the project properties (double-click the folder “Properties” in the Solution Explorer).
 2. In the Package tab, increment the package version. (Try to loosely follow [semantic versioning](https://semver.org/) with respect to the installation and usage sections above.)
 3. Save the properties, then commit and push the changes
-4. Right-click the Wurstmineberg project (not the solution) in the Solution Explorer and select “Publish…”
-5. If you haven't done this before, a dialog will ask you where you're publishing.
-    1. Select “Folder”
-    2. Choose `bin\Release\x64\` as the path
-    3. Click “Finish”
-    4. Edit the profile, changing the deployment mode to self-contained, the target runtime to win-x64, and enabling “Produce single file” and “Enable ReadyToRun compilation” in the file publish options
-    5. Rename the profile from “FolderProfile” to “x64”
-    6. Create a second publish profile with the same settings, except replacing `x64` with `x86` in the path, the target runtime, and the profile name
-6. Select the x64 profile and click Publish. Wait until the console shows “Publish: 1 succeeded, 0 failed, 0 skipped”.
-7. Repeat for the x86 profile.
-8. [Create a new release](https://github.com/wurstmineberg/systray/releases/new) with the tag and title matching the version, a summary of new features and notable bugfixes, and the attachments `wurstmineberg\bin\Release\x64\Wurstmineberg.exe` as `wurstmineberg-x64.exe` and `wurstmineberg\bin\Release\x86\Wurstmineberg.exe` as `wurstmineberg-x86.exe`
+4. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x64`
+5. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x86`
+6. [Create a new release](https://github.com/wurstmineberg/systray/releases/new) with the tag and title matching the version, a summary of new features and notable bugfixes, and the attachments `Wurstmineberg\bin\Release\net5.0-windows\win-x64\publish\Wurstmineberg.exe` as `wurstmineberg-x64.exe` and `Wurstmineberg\bin\Release\net5.0-windows\win-x86\publish\Wurstmineberg.exe` as `wurstmineberg-x86.exe`
