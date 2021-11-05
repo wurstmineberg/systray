@@ -10,19 +10,15 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Wurstmineberg.Properties;
 
-namespace Wurstmineberg
-{
-    class ProcessIcon : IDisposable
-    {
+namespace Wurstmineberg {
+    class ProcessIcon : IDisposable {
         NotifyIcon ni;
 
-        public ProcessIcon()
-        {
+        public ProcessIcon() {
             ni = new NotifyIcon();
         }
 
-        public void Display()
-        {
+        public void Display() {
             ni.MouseClick += new MouseEventHandler(ni_MouseClick);
             ni.Text = "Wurstmineberg";
             SetIcon();
@@ -37,45 +33,37 @@ namespace Wurstmineberg
         }
 
 
-        public void Dispose()
-        {
+        public void Dispose() {
             ni.Dispose();
         }
-        private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
-        {
+
+        private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e) {
             if (e.Category == UserPreferenceCategory.General) SetIcon();
         }
 
-        void ni_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
+        void ni_MouseClick(object sender, MouseEventArgs e) {
+            if (e.Button == MouseButtons.Left) {
                 Process.Start("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe");
             }
         }
 
-        private void timer_Tick(object sender, EventArgs e)
-        {
+        private void timer_Tick(object sender, EventArgs e) {
             Update();
         }
 
-        private void SetIcon()
-        {
-            if ((int)Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").GetValue("SystemUsesLightTheme") == 1)
+        private void SetIcon() {
+            if ((int)Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").GetValue("SystemUsesLightTheme") == 1) {
                 ni.Icon = Resources.wurstpick_black;
-            else
+            } else {
                 ni.Icon = Resources.wurstpick_white;
+            }
         }
 
-        private void Update()
-        {
+        private void Update() {
             Config config;
-            try
-            {
+            try {
                 config = JsonSerializer.Deserialize<Config>(File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Wurstmineberg", "config.json")));
-            }
-            catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException)
-            {
+            } catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException) {
                 config = new Config {
                     versionMatch = new Dictionary<string, string>(),
                 };
@@ -83,13 +71,10 @@ namespace Wurstmineberg
 
             JsonElement people;
             JsonElement statuses;
-            try
-            {
+            try {
                 people = GetJson(new Uri("https://wurstmineberg.de/api/v3/people.json")).GetProperty("people");
                 statuses = GetJson(new Uri("https://wurstmineberg.de/api/v3/server/worlds.json?list"));
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 //TODO change icon to an error icon
                 ni.ContextMenuStrip = null;
                 ni.Visible = true;
@@ -98,72 +83,59 @@ namespace Wurstmineberg
                 return;
             }
 
-            if (!(config.versionMatch is null) && config.versionMatch.Count > 0)
-            {
-                string launcherDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
+            if (!(config.versionMatch is null) && config.versionMatch.Count > 0) {
+                var launcherDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles_microsoft_store.json");
+                if (!File.Exists(launcherDataPath)) {
+                    launcherDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
+                }
                 LauncherData launcherData = JsonSerializer.Deserialize<LauncherData>(File.ReadAllText(launcherDataPath));
                 bool modified = false;
-                foreach (string profileId in config.versionMatch.Keys)
-                {
+                foreach (string profileId in config.versionMatch.Keys) {
                     string worldName = config.versionMatch[profileId];
                     LauncherProfile launcherProfile = launcherData.profiles[profileId];
                     string worldVersion = statuses.GetProperty(worldName).GetProperty("version").GetString();
-                    if (launcherProfile.lastVersionId != worldVersion)
-                    {
+                    if (launcherProfile.lastVersionId != worldVersion) {
                         launcherProfile.lastVersionId = worldVersion;
                         modified = true;
                     }
                 }
-                if (modified)
-                {
+                if (modified) {
                     File.WriteAllText(launcherDataPath, JsonSerializer.Serialize(launcherData, new JsonSerializerOptions { WriteIndented = true }));
                 }
             }
             ni.ContextMenuStrip = new ContextMenus().Create(people, statuses);
-            if (statuses.EnumerateObject().All(property => property.Value.GetProperty("list").GetArrayLength() == 0)) //TODO respect showIfOffline and showIfEmpty configs
-            {
+            if (statuses.EnumerateObject().All(property => property.Value.GetProperty("list").GetArrayLength() == 0)) { //TODO respect showIfOffline and showIfEmpty configs
                 ni.Visible = false;
-            }
-            else
-            {
+            } else {
                 ni.Visible = true;
                 int numOnline = statuses.EnumerateObject().Select((property, _) => property.Value.GetProperty("list").GetArrayLength()).Sum();
-                if (numOnline == 1)
-                {
+                if (numOnline == 1) {
                     JsonElement uid = Enumerable.Single<JsonElement>(statuses.EnumerateObject().SelectMany((property, _) => property.Value.GetProperty("list").EnumerateArray()));
                     String uidString = uid.ToString();
                     JsonElement person;
-                    if (!people.TryGetProperty(uidString, out person))
-                    {
+                    if (!people.TryGetProperty(uidString, out person)) {
                         person = JsonDocument.Parse("{}", new JsonDocumentOptions { }).RootElement;
                     }
                     JsonElement displayNameJson;
                     String displayName;
-                    if (person.TryGetProperty("name", out displayNameJson))
-                    {
+                    if (person.TryGetProperty("name", out displayNameJson)) {
                         displayName = displayNameJson.GetString();
-                    }
-                    else
-                    {
+                    } else {
                         displayName = uidString;
                     }
                     ni.Text = $"{displayName} is online";
-                }
-                else
-                {
+                } else {
                     ni.Text = $"{numOnline} players are online";
                 }
             }
         }
 
-        private JsonElement GetJson(Uri url)
-        {
+        private JsonElement GetJson(Uri url) {
             HttpClient client = new HttpClient();
             Task<HttpResponseMessage> responseTask = client.GetAsync(url);
             responseTask.Wait();
             HttpResponseMessage response = responseTask.Result;
-            if (!response.IsSuccessStatusCode)
-            {
+            if (!response.IsSuccessStatusCode) {
                 throw new HttpRequestException($"URL {url} returned status code {response.StatusCode} {response.ReasonPhrase}");
             }
             Task<Stream> bodyTask = response.Content.ReadAsStreamAsync();

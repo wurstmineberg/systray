@@ -11,7 +11,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <StartupObject>Wurstmineberg.Program</StartupObject>
     <ApplicationIcon>resources\wurstpick.ico</ApplicationIcon>
-    <Version>1.3.2</Version>
+    <Version>1.3.3</Version>
     <Authors>Fenhl</Authors>
     <PackageProjectUrl>https://github.com/wurstmineberg/systray</PackageProjectUrl>
     <RepositoryUrl>https://github.com/wurstmineberg/systray</RepositoryUrl>
