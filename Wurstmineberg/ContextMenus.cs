@@ -62,7 +62,7 @@ namespace Wurstmineberg {
             // start Minecraft
             item = new ToolStripMenuItem("Start Minecraft");
             item.Click += new EventHandler((sender, e) => {
-                Process.Start("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe");
+                Util.LaunchMinecraft();
             });
             menu.Items.Add(item);
 

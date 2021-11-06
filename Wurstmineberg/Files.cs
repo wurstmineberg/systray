@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Wurstmineberg {
     class Config {
+        public bool leftClickLaunch { get; set; } = true;
         public Dictionary<string, string> versionMatch { get; set; }
     }
 

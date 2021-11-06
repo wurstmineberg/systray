@@ -1,7 +1,5 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -43,7 +41,9 @@ namespace Wurstmineberg {
 
         void ni_MouseClick(object sender, MouseEventArgs e) {
             if (e.Button == MouseButtons.Left) {
-                Process.Start("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe");
+                if (Util.ReadConfig().leftClickLaunch) {
+                    Util.LaunchMinecraft();
+                }
             }
         }
 
@@ -60,15 +60,7 @@ namespace Wurstmineberg {
         }
 
         private void Update() {
-            Config config;
-            try {
-                config = JsonSerializer.Deserialize<Config>(File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Wurstmineberg", "config.json")));
-            } catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException) {
-                config = new Config {
-                    versionMatch = new Dictionary<string, string>(),
-                };
-            }
-
+            var config = Util.ReadConfig();
             JsonElement people;
             JsonElement statuses;
             try {

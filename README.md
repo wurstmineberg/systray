@@ -19,6 +19,7 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 
 You can optionally configure the behavior of the app by creating a [JSON](https://json.org/) file at `%APPDATA%\Wurstmineberg\config.json`. All entries are optional:
 
+* `leftClickLaunch`: Whether to open the Minecraft launcher when the systray icon is clicked. Defaults to `true`.
 * `versionMatch`: An object mapping Minecraft launcher profile IDs to Wurstmineberg world names. Each launcher profile's selected Minecraft version will be kept in sync with the version running on that world.
 
 # Building from source
