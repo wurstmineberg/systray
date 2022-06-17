@@ -33,9 +33,8 @@ If you would like to run an unreleased version, you can build it yourself:
 
 # Publishing a new version
 
-1. In [Visual Studio 2019](https://visualstudio.microsoft.com/vs/), open the project properties (double-click the folder “Properties” in the Solution Explorer).
-2. In the Package tab, increment the package version. (Try to loosely follow [semantic versioning](https://semver.org/) with respect to the installation and usage sections above.)
-3. Save the properties, then commit and push the changes
-4. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x64`
-5. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x86`
-6. [Create a new release](https://github.com/wurstmineberg/systray/releases/new) with the tag and title matching the version, a summary of new features and notable bugfixes, and the attachments `Wurstmineberg\bin\Release\net5.0-windows\win-x64\publish\Wurstmineberg.exe` as `wurstmineberg-x64.exe` and `Wurstmineberg\bin\Release\net5.0-windows\win-x86\publish\Wurstmineberg.exe` as `wurstmineberg-x86.exe`
+1. Increment the `Version` field in `Wurstmineberg\Wurstmineberg.csproj`. (Try to loosely follow [semantic versioning](https://semver.org/) with respect to the installation and usage sections above.)
+2. Commit and push the changes
+3. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x64`
+4. Run `dotnet publish -c Release -p:PublishSingleFile=true --self-contained true -p:IncludeNativeLibrariesForSelfExtract=true -r win-x86`
+5. [Create a new release](https://github.com/wurstmineberg/systray/releases/new) with the tag and title matching the version, a summary of new features and notable bugfixes, and the attachments `Wurstmineberg\bin\Release\net5.0-windows\win-x64\publish\Wurstmineberg.exe` as `wurstmineberg-x64.exe` and `Wurstmineberg\bin\Release\net5.0-windows\win-x86\publish\Wurstmineberg.exe` as `wurstmineberg-x86.exe`

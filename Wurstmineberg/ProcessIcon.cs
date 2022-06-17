@@ -100,6 +100,7 @@ namespace Wurstmineberg {
                 ni.Visible = false;
             } else {
                 ni.Visible = true;
+                SetIcon();
                 int numOnline = statuses.EnumerateObject().Select((property, _) => property.Value.GetProperty("list").GetArrayLength()).Sum();
                 if (numOnline == 1) {
                     JsonElement uid = Enumerable.Single<JsonElement>(statuses.EnumerateObject().SelectMany((property, _) => property.Value.GetProperty("list").EnumerateArray()));
