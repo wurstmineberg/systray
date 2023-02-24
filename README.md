@@ -7,7 +7,9 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 1. Download the app: [64-bit](https://github.com/wurstmineberg/systray/releases/latest/download/wurstmineberg-x64.exe) • [32-bit](https://github.com/wurstmineberg/systray/releases/latest/download/wurstmineberg-x86.exe)
 2. You can simply double-click the app to run it, no installation required. Nothing will happen if no one is online, but the icon will appear once there's someone in the main world.
 3. To automatically start the app when you sign in, press <kbd>Win</kbd><kbd>R</kbd>, type `shell:startup`, and move the downloaded app into the folder that appears.
-4. To ensure that the icon is visible when someone's online and not hidden behind the “Show hidden icons” arrow, right-click on that arrow, select “Taskbar settings”, click “Select which icons appear on the taskbar”, and enable the toggle for Wurstmineberg.
+4. To ensure that the icon is visible when someone's online and not hidden behind the “Show hidden icons” arrow:
+    * On Windows 11: right-click on empty space in the taskbar, select “Taskbar settings”, click “Other system tray icons”, and enable the toggle for Wurstmineberg.
+    * On Windows 10: right-click on that arrow, select “Taskbar settings”, click “Select which icons appear on the taskbar”, and enable the toggle for Wurstmineberg.
 
 # Usage
 
