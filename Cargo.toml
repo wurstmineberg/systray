@@ -1,0 +1,39 @@
+[package]
+name = "systray-wurstmineberg-status"
+version = "2.0.0"
+authors = ["Fenhl <fenhl@fenhl.net>"]
+edition = "2021"
+repository = "https://github.com/wurstmineberg/systray"
+
+[lints.rust]
+rust_2018_idioms = "deny"
+unsafe_code = "forbid"
+unused = "deny"
+unused_crate_dependencies = "deny"
+unused_import_braces = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "deny"
+warnings = "deny"
+
+[profile.release]
+lto = true
+strip = true
+
+[dependencies]
+directories = "5.0.1"
+itertools = "0.12.0"
+log-lock = { git = "https://github.com/fenhl/log-lock", branch = "main" }
+native-windows-derive = "1.0.5"
+native-windows-gui = { version = "1.0.13", default-features = false, features = ["tray-notification", "high-dpi", "cursor", "message-window", "menu", "notice", "embed-resource"] }
+open = "5.0.1"
+registry = "1.2.3"
+reqwest = { version = "0.11.23", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.112"
+serenity = { version = "0.12.0", default-features = false }
+thiserror = "1.0.56"
+tokio = { version = "1.35.1", features = ["rt", "time"] }
+wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["serde", "serde_json", "reqwest"] }
+
+[build-dependencies]
+winres = "0.1.12"
