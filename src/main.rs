@@ -71,13 +71,13 @@ pub struct SystemTray {
     #[nwg_events(OnNotice: [SystemTray::set_icon])]
     update_notice: nwg::Notice,
     event_handler: RefCell<Option<nwg::EventHandler>>,
-    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("2"))]
+    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("LOGO_BLACK_16"))]
     logo_black_16: nwg::Icon,
-    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("3"))]
+    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("LOGO_BLACK_32"))]
     logo_black_32: nwg::Icon,
-    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("4"))]
+    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("LOGO_WHITE_16"))]
     logo_white_16: nwg::Icon,
-    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("5"))]
+    #[nwg_resource(source_embed: Some(&data.embed), source_embed_str: Some("LOGO_WHITE_32"))]
     logo_white_32: nwg::Icon,
     #[nwg_control(icon: Some(&data.logo_white_16), tip: Some("Wurstmineberg: Loading…"))]
     #[nwg_events(MousePressLeftUp: [SystemTray::click], OnContextMenu: [SystemTray::show_menu(RC_SELF)])]
