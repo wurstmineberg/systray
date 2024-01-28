@@ -237,19 +237,26 @@ impl SystemTray {
     }
 
     fn launch_minecraft(&self) {
-        match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
+        match Command::new("prismlauncher")
             .create_no_window()
             .spawn()
         {
             Ok(_) => {}
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                Command::new("explorer")
-                    .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
-                    .create_no_window()
-                    .spawn()
-                    .expect("failed to launch Minecraft (new launcher)");
-            }
-            Err(e) => panic!("failed to launch Minecraft (old launcher): {e} ({e:?})"),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
+                .create_no_window()
+                .spawn()
+            {
+                Ok(_) => {}
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    Command::new("explorer")
+                        .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
+                        .create_no_window()
+                        .spawn()
+                        .expect("failed to launch Minecraft (new launcher)");
+                }
+                Err(e) => panic!("failed to launch Minecraft (old launcher): {e} ({e:?})"),
+            },
+            Err(e) => panic!("failed to launch Minecraft (Prism Launcher): {e} ({e:?})"),
         }
     }
 
@@ -306,7 +313,7 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_
         .http2_prior_knowledge()
         .build()?;
     loop {
-        let config = Config::load().await?; //TODO update config field of app?
+        let config = Config::load().await?; //TODO update config field of app? (make sure to keep overrides from CLI args)
         let new_state = match get_state(&http_client).await {
             Ok((people, statuses)) => {
                 if !config.version_match.is_empty() {
@@ -355,11 +362,28 @@ enum MainError {
     #[error(transparent)] Nwg(#[from] nwg::NwgError),
 }
 
-fn gui_main() -> Result<(), MainError> {
+#[derive(clap::Parser)]
+struct Args {
+    #[clap(long)]
+    show_if_empty: bool,
+}
+
+impl Args {
+    fn to_config(self) -> Result<Config, config::Error> {
+        let Self { show_if_empty } = self;
+        let mut config = Config::blocking_load()?;
+        if show_if_empty {
+            config.show_if_empty = true;
+        }
+        Ok(config)
+    }
+}
+
+fn gui_main(args: Args) -> Result<(), MainError> {
     nwg::init()?;
     let app = SystemTray::build_ui(SystemTray {
         runtime: Some(Runtime::new()?),
-        config: Config::blocking_load()?,
+        config: args.to_config()?,
         ..SystemTray::default()
     })?;
     nwg::dispatch_thread_events();
@@ -367,8 +391,9 @@ fn gui_main() -> Result<(), MainError> {
     Ok(())
 }
 
-fn main() {
-    if let Err(e) = gui_main() {
+#[wheel::main]
+fn main(args: Args) {
+    if let Err(e) = gui_main(args) {
         nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
     }
 }
