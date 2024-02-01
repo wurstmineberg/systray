@@ -14,6 +14,7 @@ fn make_true() -> bool { true }
 pub(crate) struct Config {
     #[serde(default = "make_true")]
     pub(crate) left_click_launch: bool,
+    pub(crate) prism_instance: Option<String>,
     #[serde(default)]
     pub(crate) show_if_empty: bool,
     #[serde(default)]
@@ -55,6 +56,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             left_click_launch: true,
+            prism_instance: None,
             show_if_empty: false,
             show_if_offline: false,
             version_match: HashMap::default(),

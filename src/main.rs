@@ -237,10 +237,12 @@ impl SystemTray {
     }
 
     fn launch_minecraft(&self) {
-        match Command::new("prismlauncher")
-            .create_no_window()
-            .spawn()
-        {
+        let mut prism_command = Command::new("prismlauncher");
+        if let Some(ref instance) = self.config.prism_instance {
+            prism_command.arg("--show");
+            prism_command.arg(instance);
+        }
+        match prism_command.create_no_window().spawn() {
             Ok(_) => {}
             Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
                 .create_no_window()
