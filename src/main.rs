@@ -102,23 +102,20 @@ impl SystemTray {
         let is_light = registry::Hive::CurrentUser.open(r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", registry::Security::QueryValue).ok()
             .and_then(|key| key.value("SystemUsesLightTheme").ok())
             .map_or(false, |data| matches!(data, registry::Data::U32(1)));
-        let (visibility, tooltip) = {
-            let lock = lock!(@blocking self.state);
-            match *lock {
-                Some(Ok((ref people, ref statuses))) => if statuses.values().any(|status| !status.list.is_empty()) || if statuses[MAIN_WORLD].running { self.config.show_if_empty } else { self.config.show_if_offline } {
-                    (true, if let Ok(uid) = statuses.values().flat_map(|world| &world.list).exactly_one() {
-                        let person = people.get(uid).and_then(|person| person.name.clone()).unwrap_or_else(|| uid.to_string());
-                        format!("{person} is online")
-                    } else {
-                        format!("{} players are online", statuses.values().map(|world| world.list.len()).sum::<usize>())
-                    })
+        let (visibility, tooltip) = lock!(@blocking lock = self.state; match *lock {
+            Some(Ok((ref people, ref statuses))) => if statuses.values().any(|status| !status.list.is_empty()) || if statuses[MAIN_WORLD].running { self.config.show_if_empty } else { self.config.show_if_offline } {
+                (true, if let Ok(uid) = statuses.values().flat_map(|world| &world.list).exactly_one() {
+                    let person = people.get(uid).and_then(|person| person.name.clone()).unwrap_or_else(|| uid.to_string());
+                    format!("{person} is online")
                 } else {
-                    (false, String::default())
-                },
-                Some(Err(_)) => (true, format!("error getting data")),
-                None => (true, format!("Wurstmineberg: Loading…")),
-            }
-        };
+                    format!("{} players are online", statuses.values().map(|world| world.list.len()).sum::<usize>())
+                })
+            } else {
+                (false, String::default())
+            },
+            Some(Err(_)) => (true, format!("error getting data")),
+            None => (true, format!("Wurstmineberg: Loading…")),
+        });
         self.tray.set_visibility(visibility);
         self.tray.set_icon(match (is_light, nwg::scale_factor() >= 1.5) {
             (true, true) => &self.logo_black_32,
@@ -162,62 +159,59 @@ impl SystemTray {
         }))) {
             nwg::unbind_event_handler(&previous_event_handler);
         }
-        {
-            let lock = lock!(@blocking self.state);
-            match *lock {
-                Some(Ok((ref people, ref statuses))) => if statuses.values().any(|status| !status.list.is_empty()) || if statuses[MAIN_WORLD].running { self.config.show_if_empty } else { self.config.show_if_offline } {
-                    for (world_name, status) in statuses {
-                        if (world_name == MAIN_WORLD && !status.running) || !status.list.is_empty() {
+        lock!(@blocking lock = self.state; match *lock {
+            Some(Ok((ref people, ref statuses))) => if statuses.values().any(|status| !status.list.is_empty()) || if statuses[MAIN_WORLD].running { self.config.show_if_empty } else { self.config.show_if_offline } {
+                for (world_name, status) in statuses {
+                    if (world_name == MAIN_WORLD && !status.running) || !status.list.is_empty() {
+                        let mut item = nwg::MenuItem::default();
+                        nwg::MenuItem::builder()
+                            .text(world_name)
+                            .disabled(true)
+                            .parent(&menu)
+                            .build(&mut item).expect("failed to generate tray menu");
+                        self.other_items.borrow_mut().push(item);
+                        //TODO respect versionLink config
+                        let mut item = nwg::MenuItem::default();
+                        nwg::MenuItem::builder()
+                            .text(&format!("Version: {}", status.version))
+                            .parent(&menu)
+                            .build(&mut item).expect("failed to generate tray menu");
+                        self.version_items.borrow_mut().push((item, status.version.clone()));
+                        if !status.running {
                             let mut item = nwg::MenuItem::default();
                             nwg::MenuItem::builder()
-                                .text(world_name)
+                                .text("Server offline")
                                 .disabled(true)
                                 .parent(&menu)
                                 .build(&mut item).expect("failed to generate tray menu");
                             self.other_items.borrow_mut().push(item);
-                            //TODO respect versionLink config
+                        }
+                        for uid in &status.list {
                             let mut item = nwg::MenuItem::default();
                             nwg::MenuItem::builder()
-                                .text(&format!("Version: {}", status.version))
+                                .text(&people.get(uid).and_then(|person| person.name.clone()).unwrap_or_else(|| uid.to_string()))
                                 .parent(&menu)
                                 .build(&mut item).expect("failed to generate tray menu");
-                            self.version_items.borrow_mut().push((item, status.version.clone()));
-                            if !status.running {
-                                let mut item = nwg::MenuItem::default();
-                                nwg::MenuItem::builder()
-                                    .text("Server offline")
-                                    .disabled(true)
-                                    .parent(&menu)
-                                    .build(&mut item).expect("failed to generate tray menu");
-                                self.other_items.borrow_mut().push(item);
-                            }
-                            for uid in &status.list {
-                                let mut item = nwg::MenuItem::default();
-                                nwg::MenuItem::builder()
-                                    .text(&people.get(uid).and_then(|person| person.name.clone()).unwrap_or_else(|| uid.to_string()))
-                                    .parent(&menu)
-                                    .build(&mut item).expect("failed to generate tray menu");
-                                self.user_items.borrow_mut().push((item, uid.clone()));
-                            }
-                            nwg::MenuSeparator::builder()
-                                .parent(&menu)
-                                .build(&mut self.sep.borrow_mut()).expect("failed to generate tray menu");
+                            self.user_items.borrow_mut().push((item, uid.clone()));
                         }
+                        nwg::MenuSeparator::builder()
+                            .parent(&menu)
+                            .build(&mut self.sep.borrow_mut()).expect("failed to generate tray menu");
                     }
-                },
-                Some(Err(ref e)) => {
-                    nwg::MenuItem::builder()
-                        .text(&e.to_string())
-                        .disabled(true)
-                        .parent(&menu)
-                        .build(&mut self.item_error.borrow_mut()).expect("failed to generate tray menu");
-                    nwg::MenuSeparator::builder()
-                        .parent(&menu)
-                        .build(&mut self.sep.borrow_mut()).expect("failed to generate tray menu");
                 }
-                None => {}
+            },
+            Some(Err(ref e)) => {
+                nwg::MenuItem::builder()
+                    .text(&e.to_string())
+                    .disabled(true)
+                    .parent(&menu)
+                    .build(&mut self.item_error.borrow_mut()).expect("failed to generate tray menu");
+                nwg::MenuSeparator::builder()
+                    .parent(&menu)
+                    .build(&mut self.sep.borrow_mut()).expect("failed to generate tray menu");
             }
-        }
+            None => {}
+        });
         nwg::MenuItem::builder()
             .text("Start Minecraft")
             .parent(&menu)
@@ -345,7 +339,7 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_
             Err(e) if e.is_network_error() => Err(e),
             Err(e) => return Err(e),
         };
-        *lock!(state) = Some(new_state);
+        lock!(state = state; *state = Some(new_state));
         update_notifier.notice();
         sleep(Duration::from_secs(45)).await;
     }
