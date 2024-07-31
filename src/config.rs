@@ -5,6 +5,7 @@ use {
     },
     directories::BaseDirs,
     serde::Deserialize,
+    wheel::traits::IoResultExt as _,
 };
 
 fn make_true() -> bool { true }
@@ -44,11 +45,7 @@ impl Config {
 
     pub(crate) async fn load() -> Result<Self, Error> {
         let path = BaseDirs::new().ok_or(Error::BaseDirs)?.data_dir().join("Wurstmineberg").join("config.json");
-        Ok(if wheel::fs::exists(&path).await? {
-            wheel::fs::read_json(path).await?
-        } else {
-            Self::default()
-        })
+        Ok(wheel::fs::read_json(path).await.missing_ok()?)
     }
 }
 
