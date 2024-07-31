@@ -6,6 +6,7 @@ use {
     directories::BaseDirs,
     serde::Deserialize,
     wheel::traits::IoResultExt as _,
+    crate::Uid,
 };
 
 fn make_true() -> bool { true }
@@ -13,6 +14,8 @@ fn make_true() -> bool { true }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Config {
+    #[serde(default)]
+    pub(crate) ignored_players: Vec<Uid>,
     #[serde(default = "make_true")]
     pub(crate) left_click_launch: bool,
     pub(crate) prism_instance: Option<String>,
@@ -52,6 +55,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            ignored_players: Vec::default(),
             left_click_launch: true,
             prism_instance: None,
             show_if_empty: false,

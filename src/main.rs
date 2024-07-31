@@ -311,7 +311,10 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_
     loop {
         let config = Config::load().await?; //TODO update config field of app? (make sure to keep overrides from CLI args)
         let new_state = match get_state(&http_client).await {
-            Ok((people, statuses)) => {
+            Ok((people, mut statuses)) => {
+                for status in statuses.values_mut() {
+                    status.list.retain(|uid| !config.ignored_players.contains(uid));
+                }
                 if !config.version_match.is_empty() {
                     let base_dirs = BaseDirs::new().ok_or(Error::BaseDirs)?;
                     let mut launcher_data_path = base_dirs.data_dir().join(".minecraft").join("launcher_profiles_microsoft_store.json");

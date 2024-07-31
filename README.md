@@ -30,6 +30,7 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 You can optionally configure the behavior of the app by creating a [JSON](https://json.org/) file at `%APPDATA%\Wurstmineberg\config.json`. All entries are optional:
 
 * `leftClickLaunch`: Whether to open Minecraft when the systray icon is clicked. Defaults to `true`.
+* `ignoredPlayers`: An array of Wurstmineberg IDs and/or Discord snowflakes of players who should not be listed. To ignore a player who has both a Wurstmineberg ID and a Discord snowflake, list the Discord snowflake.
 * `prismInstance`: When using [Prism Launcher](https://prismlauncher.org/), directly navigate to the given instance ID's window instead of the launcher's main window. See also: [What is an instance ID, and where do I find it?](https://prismlauncher.org/wiki/getting-started/command-line-interface/#what-is-an-instance-id-and-where-do-i-find-it)
 * `showIfEmpty`: If `false`, the plugin is hidden entirely if the main world is running but no players are online on any world. Defaults to `false`.
 * `showIfOffline`: If `false`, the plugin is hidden entirely if the main world is not running and no players are online on any world. Defaults to `false`.

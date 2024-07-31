@@ -1704,7 +1704,7 @@ checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
 
 [[package]]
 name = "systray-wurstmineberg-status"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "clap",
  "directories",
