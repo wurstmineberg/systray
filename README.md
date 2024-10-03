@@ -35,6 +35,12 @@ You can optionally configure the behavior of the app by creating a [JSON](https:
 * `showIfEmpty`: If `false`, the plugin is hidden entirely if the main world is running but no players are online on any world. Defaults to `false`.
 * `showIfOffline`: If `false`, the plugin is hidden entirely if the main world is not running and no players are online on any world. Defaults to `false`.
 * `versionMatch`: An object mapping Minecraft launcher profile IDs to Wurstmineberg world names. Each launcher profile's selected Minecraft version will be kept in sync with the version running on that world.
+* `ferium`: Optional configuration for [ferium](https://github.com/gorilla-devs/ferium):
+    * `profiles`: An object mapping Wurstmineberg world names to ferium profile names. Each ferium profile's selected Minecraft version will be synced to the version running on that world on launch, and all mods will be updated.
+    * `versionOverride`: A Minecraft version to use instead of syncing to the world's version.
+    * `githubToken`: GitHub personal access token that will be passed to ferium.
+* `portablemc`: Optional configuration for [portablemc](https://pypi.org/project/portablemc/):
+    * `login`: Login email address. If this is specified, Minecraft will be launched using portablemc instead of trying Prism Launcher or the official Minecraft Launcher. Use `python -m portablemc login` to configure this before the first launch.
 
 # Building from source
 

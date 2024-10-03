@@ -1657,7 +1657,7 @@ dependencies = [
 
 [[package]]
 name = "systray-wurstmineberg-status"
-version = "2.3.1"
+version = "2.4.0"
 dependencies = [
  "clap",
  "directories",
@@ -1960,9 +1960,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.15"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08f95100a766bf4f8f28f90d77e0a5461bbdb219042e7679bebe79004fed8d75"
+checksum = "5ab17db44d7388991a428b2ee655ce0c212e862eff1768a455c58f9aad6e7893"
 
 [[package]]
 name = "unicode-ident"
@@ -2118,8 +2118,8 @@ dependencies = [
 
 [[package]]
 name = "wheel"
-version = "0.14.2"
-source = "git+https://github.com/fenhl/wheel?branch=main#6c9253a28237bda463589a0b52ed3134837f6f68"
+version = "0.14.3"
+source = "git+https://github.com/fenhl/wheel?branch=main#58075028e61e580d4f383ac843ffdc30ae6afd4d"
 dependencies = [
  "async-trait",
  "clap",
@@ -2136,8 +2136,8 @@ dependencies = [
 
 [[package]]
 name = "wheel-derive"
-version = "0.14.2"
-source = "git+https://github.com/fenhl/wheel?branch=main#6c9253a28237bda463589a0b52ed3134837f6f68"
+version = "0.14.3"
+source = "git+https://github.com/fenhl/wheel?branch=main#58075028e61e580d4f383ac843ffdc30ae6afd4d"
 dependencies = [
  "itertools",
  "proc-macro2",

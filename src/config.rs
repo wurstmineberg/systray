@@ -2,6 +2,7 @@ use {
     std::{
         collections::HashMap,
         fs,
+        process::Command,
     },
     directories::BaseDirs,
     serde::Deserialize,
@@ -18,6 +19,10 @@ pub(crate) struct Config {
     pub(crate) ignored_players: Vec<Uid>,
     #[serde(default = "make_true")]
     pub(crate) left_click_launch: bool,
+    #[serde(default)]
+    pub(crate) ferium: Ferium,
+    #[serde(default)]
+    pub(crate) portablemc: PortableMc,
     pub(crate) prism_instance: Option<String>,
     #[serde(default)]
     pub(crate) show_if_empty: bool,
@@ -57,10 +62,41 @@ impl Default for Config {
         Self {
             ignored_players: Vec::default(),
             left_click_launch: true,
+            ferium: Ferium::default(),
+            portablemc: PortableMc::default(),
             prism_instance: None,
             show_if_empty: false,
             show_if_offline: false,
             version_match: HashMap::default(),
         }
     }
+}
+
+/// Configuration for <https://github.com/gorilla-devs/ferium>
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Ferium {
+    /// Maps Wurstmineberg world names to ferium profile names.
+    #[serde(default)]
+    pub(crate) profiles: HashMap<String, String>,
+    pub(crate) version_override: Option<String>,
+    pub(crate) github_token: Option<String>,
+}
+
+impl Ferium {
+    pub(crate) fn command(&self) -> Command {
+        let mut cmd = Command::new("ferium");
+        if let Some(ref github_token) = self.github_token {
+            cmd.arg("--github-token");
+            cmd.arg(github_token);
+        }
+        cmd
+    }
+}
+
+/// Configuration for <https://pypi.org/project/portablemc/>
+#[derive(Default, Deserialize)]
+pub(crate) struct PortableMc {
+    /// Login email address. If this is specified, Minecraft will be launched using portablemc.
+    pub(crate) login: Option<String>,
 }

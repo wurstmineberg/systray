@@ -4,6 +4,8 @@ use {
     std::{
         cell::RefCell,
         collections::HashMap,
+        io::prelude::*,
+        path::PathBuf,
         process::Command,
         rc::Rc,
         sync::Arc,
@@ -28,8 +30,10 @@ use {
         fs,
         traits::{
             CommandExt as _,
+            IoResultExt as _,
             IsNetworkError,
             ReqwestResponseExt as _,
+            SyncCommandOutputExt as _,
         },
     },
     crate::{
@@ -138,7 +142,7 @@ impl SystemTray {
         let app = self.clone();
         if let Some(previous_event_handler) = self.event_handler.replace(Some(nwg::full_bind_event_handler(&self.window.handle, move |event, _, handle| match event {
             nwg::Event::OnMenuItemSelected => if handle == app.item_launch_minecraft.borrow().handle {
-                app.launch_minecraft();
+                app.launch_minecraft().expect("failed to launch Minecraft");
             } else if handle == app.item_exit.borrow().handle {
                 app.exit();
             } else {
@@ -226,39 +230,127 @@ impl SystemTray {
 
     fn click(&self) {
         if self.config.left_click_launch {
-            self.launch_minecraft();
+            self.launch_minecraft().expect("failed to launch Minecraft");
         }
     }
 
-    fn launch_minecraft(&self) {
-        let mut prism_command = Command::new("prismlauncher");
-        if let Some(ref instance) = self.config.prism_instance {
-            prism_command.arg("--show");
-            prism_command.arg(instance);
-        }
-        match prism_command.create_no_window().spawn() {
-            Ok(_) => {}
-            Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
-                .create_no_window()
-                .spawn()
-            {
+    fn launch_minecraft(&self) -> Result<(), LaunchError> {
+        let game_version = if let Some(ref version_override) = self.config.ferium.version_override {
+            Some(version_override.clone())
+        } else {
+            lock!(@blocking lock = self.state; {
+                let (_, world_status) = lock.as_ref().ok_or(LaunchError::MissingState)?.as_ref().map_err(|e| LaunchError::State { display: e.to_string(), debug: format!("{e:?}") })?;
+                world_status.get(MAIN_WORLD).map(|world_status| world_status.version.clone())
+            })
+        };
+        let portablemc_work_dir = if let Some(ferium_profile) = self.config.ferium.profiles.get(MAIN_WORLD) {
+            if let Some(ref game_version) = game_version {
+                let previous_profile = self.config.ferium.command()
+                    .arg("profile")
+                    .release_create_no_window()
+                    .check("ferium profile")?
+                    .stdout;
+                let mut previous_profile = String::from_utf8(previous_profile)?;
+                previous_profile.truncate(previous_profile.find(" *").ok_or(LaunchError::FeriumProfileFormat)?);
+                self.config.ferium.command()
+                    .arg("profile")
+                    .arg("switch")
+                    .arg(ferium_profile)
+                    .release_create_no_window()
+                    .check("ferium profile switch")?;
+                let current_profile = self.config.ferium.command()
+                    .arg("profile")
+                    .release_create_no_window()
+                    .check("ferium profile")?
+                    .stdout;
+                self.config.ferium.command()
+                    .arg("profile")
+                    .arg("configure")
+                    .arg("--game-version")
+                    .arg(game_version)
+                    .release_create_no_window()
+                    .check("ferium profile configure --game-version")?;
+                self.config.ferium.command()
+                    .arg("upgrade")
+                    .release_create_no_window()
+                    .check("ferium upgrade")?;
+                self.config.ferium.command()
+                    .arg("profile")
+                    .arg("switch")
+                    .arg(previous_profile)
+                    .release_create_no_window()
+                    .check("ferium profile switch")?;
+                current_profile.lines().find_map(|line| line.ok().and_then(|line| line.strip_prefix("        \r  Output directory:   ").map(|dir| {
+                    let mut dir = PathBuf::from(dir);
+                    dir.pop();
+                    dir
+                })))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        if let Some(ref portablemc_login) = self.config.portablemc.login {
+            let mut cmd = Command::new("python");
+            cmd.arg("-m");
+            cmd.arg("portablemc");
+            if let Some(work_dir) = portablemc_work_dir {
+                cmd.arg("--work-dir");
+                cmd.arg(work_dir);
+            }
+            cmd.arg("start");
+            cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
+            cmd.arg("--server=wurstmineberg.de");
+            cmd.arg("--login");
+            cmd.arg(portablemc_login);
+            cmd.release_create_no_window();
+            cmd.spawn().at_command("python -m portablemc")?;
+        } else {
+            let mut prism_command = Command::new("prismlauncher");
+            if let Some(ref instance) = self.config.prism_instance {
+                prism_command.arg("--show");
+                prism_command.arg(instance);
+            }
+            match prism_command.release_create_no_window().spawn() {
                 Ok(_) => {}
-                Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                    Command::new("explorer")
-                        .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
-                        .create_no_window()
-                        .spawn()
-                        .expect("failed to launch Minecraft (new launcher)");
-                }
-                Err(e) => panic!("failed to launch Minecraft (old launcher): {e} ({e:?})"),
-            },
-            Err(e) => panic!("failed to launch Minecraft (Prism Launcher): {e} ({e:?})"),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
+                    .release_create_no_window()
+                    .spawn()
+                {
+                    Ok(_) => {}
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                        Command::new("explorer")
+                            .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
+                            .release_create_no_window()
+                            .spawn().at_command("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
+                    }
+                    Err(e) => return Err(e).at_command("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe").map_err(LaunchError::from),
+                },
+                Err(e) => return Err(e).at_command("prismlauncher").map_err(LaunchError::from),
+            }
         }
+        Ok(())
     }
 
     fn exit(&self) {
         nwg::stop_thread_dispatch();
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum LaunchError {
+    #[error(transparent)] Utf8(#[from] std::string::FromUtf8Error),
+    #[error(transparent)] Wheel(#[from] wheel::Error),
+    #[error("failed to parse `ferium profile` command output")]
+    FeriumProfileFormat,
+    #[error("missing server state")]
+    MissingState,
+    #[error("{display}")]
+    State {
+        display: String,
+        debug: String,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]
