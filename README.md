@@ -22,8 +22,12 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 # Usage
 
 * The icon only appears as long as someone is online on one of our worlds. You can hover over it to see how many people are online (and if it's only one player, their name).
-* You can left-click on the icon to start Minecraft. This supports both the official Minecraft launcher and [Prism Launcher](https://prismlauncher.org/). For Prism Launcher to be detected, it must be available on the `PATH`. If Prism Launcher is installed via [Scoop](https://scoop.sh/), this should be the case by default.
+* You can left-click on the icon to start Minecraft. This supports [portablemc](https://pypi.org/project/portablemc/), [Prism Launcher](https://prismlauncher.org/), and the official Minecraft launcher.
+    * For portablemc to be used, the `.portablemc.login` [configuration](#configuration) entry must be specified.
+    * For Prism Launcher to be used, it must be available on the `PATH`. If Prism Launcher is installed via [Scoop](https://scoop.sh/), this should be the case by default.
+    * The official Minecraft launcher is the fallback if the conditions for using neither portablemc nor Prism Launcher are met. Both the new Microsoft Store launcher and the old launcher are supported.
 * You can right-click on the icon to see the active worlds, their current versions (each with a link to the [Minecraft wiki](https://minecraft.fandom/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
+* The app can be run from the command line with the `launch` subcommand to start Minecraft (same behavior as left-clicking on the system tray icon).
 
 ## Configuration
 
