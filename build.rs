@@ -1,6 +1,6 @@
 use {
     std::io,
-    winres::WindowsResource,
+    winresource::WindowsResource,
 };
 
 fn main() -> io::Result<()> {

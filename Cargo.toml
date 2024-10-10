@@ -37,4 +37,4 @@ tokio = { version = "1.35.1", features = ["rt-multi-thread", "time"] }
 wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["serde", "serde_json", "reqwest"] }
 
 [build-dependencies]
-winres = "0.1.12"
+winresource = "0.1"
