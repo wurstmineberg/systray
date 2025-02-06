@@ -50,24 +50,19 @@ You can optionally configure the behavior of the app by creating a [JSON](https:
 
 If [pre-built binaries](https://github.com/fenhl/melt#installation) are not available for your system, if you would like to manage updates of the app using [`cargo-update`](https://crates.io/crates/cargo-update), or if you would like to run an unreleased version, follow these instructions:
 
-1. Download and install [Visual Studio](https://visualstudio.microsoft.com/vs/) (the Community edition should work). On the “Workloads” screen of the installer, make sure “Desktop development with C++” is selected, and on the “Individual components” screen, select “VS 2022 C++ ARM64/ARM64EC build tools (Latest)” and “C++ Clang Compiler for Windows”. (Note that [Visual Studio Code](https://code.visualstudio.com/) is not the same thing as Visual Studio. You need VS, not VS Code.)
-2. Add `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin` to the `PATH`. For example, in PowerShell:
-    ```pwsh
-    $env:Path += ";C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
-    ```
-3. Install Rust:
-    * On Windows, download and run [rustup-init.exe](https://win.rustup.rs/) and follow its instructions.
+1. Install Rust:
+    * On Windows, download and run [rustup-init.exe](https://win.rustup.rs/) and follow its instructions. If asked to install Visual C++ prerequisites, use the “Quick install via the Visual Studio Community installer” option. You can uncheck the option to launch Visual Studio when done.
     * On other platforms, please see [the Rust website](https://www.rust-lang.org/tools/install) for instructions.
-4. Open a command line:
+2. Open a command line:
     * On Windows, right-click the start button, then click “Terminal”, “Windows PowerShell”, or “Command Prompt”.
     * On other platforms, look for an app named “Terminal” or similar.
-5. In the command line, run the following command. Depending on your computer, this may take a while.
+3. In the command line, run the following command. Depending on your computer, this may take a while.
     ```pwsh
     cargo install --git=https://github.com/wurstmineberg/systray --branch=main
     ```
-6. The exe will be available as `.cargo\bin\systray-wurstmineberg-status.exe` in your user folder. You can simply double-click the app to run it, no installation required. Nothing will happen if no one is online, but the icon will appear once there's someone in the main world.
-7. To automatically start the app when you sign in, press <kbd>Win</kbd><kbd>R</kbd>, type `shell:startup`, and create a shortcut in the folder that appears.
-8. To ensure that the icon is visible when someone's online and not hidden behind the “Show hidden icons” arrow:
+4. The exe will be available as `.cargo\bin\systray-wurstmineberg-status.exe` in your user folder. You can simply double-click the app to run it, no installation required. Nothing will happen if no one is online, but the icon will appear once there's someone in the main world.
+5. To automatically start the app when you sign in, press <kbd>Win</kbd><kbd>R</kbd>, type `shell:startup`, and create a shortcut in the folder that appears.
+6. To ensure that the icon is visible when someone's online and not hidden behind the “Show hidden icons” arrow:
     * On Windows 11: right-click on empty space in the taskbar, select “Taskbar settings”, click “Other system tray icons”, and enable the toggle for Wurstmineberg.
     * On Windows 10: right-click on that arrow, select “Taskbar settings”, click “Select which icons appear on the taskbar”, and enable the toggle for Wurstmineberg.
 
