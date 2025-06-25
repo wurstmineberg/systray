@@ -56,7 +56,7 @@ struct WorldStatus {
     #[serde(default)]
     list: Vec<Uid>,
     running: bool,
-    version: String,
+    version: Option<String>,
 }
 
 type State = (HashMap<Uid, Person>, HashMap<String, WorldStatus>);
@@ -87,7 +87,7 @@ pub struct SystemTray {
     #[nwg_events(MousePressLeftUp: [SystemTray::click], OnContextMenu: [SystemTray::show_menu(RC_SELF)])]
     tray: nwg::TrayNotification,
     tray_menu: RefCell<nwg::Menu>,
-    version_items: RefCell<Vec<(nwg::MenuItem, String)>>,
+    version_items: RefCell<Vec<(nwg::MenuItem, Option<String>)>>,
     user_items: RefCell<Vec<(nwg::MenuItem, Uid)>>,
     other_items: RefCell<Vec<nwg::MenuItem>>,
     sep: RefCell<nwg::MenuSeparator>,
@@ -148,7 +148,9 @@ impl SystemTray {
             } else {
                 for (item, version) in &*app.version_items.borrow() {
                     if handle == item.handle {
-                        open(format!("https://minecraft.wiki/w/Java_Edition_{version}")).expect("failed to open wiki article");
+                        if let Some(version) = version {
+                            open(format!("https://minecraft.wiki/w/Java_Edition_{version}")).expect("failed to open wiki article");
+                        }
                         return
                     }
                 }
@@ -176,10 +178,18 @@ impl SystemTray {
                         self.other_items.borrow_mut().push(item);
                         //TODO respect versionLink config
                         let mut item = nwg::MenuItem::default();
-                        nwg::MenuItem::builder()
-                            .text(&format!("Version: {}", status.version))
-                            .parent(&menu)
-                            .build(&mut item).expect("failed to generate tray menu");
+                        if let Some(version) = &status.version {
+                            nwg::MenuItem::builder()
+                                .text(&format!("Version: {version}"))
+                                .parent(&menu)
+                                .build(&mut item).expect("failed to generate tray menu");
+                        } else {
+                            nwg::MenuItem::builder()
+                                .text("Modded Server, Unknown Version")
+                                .disabled(true)
+                                .parent(&menu)
+                                .build(&mut item).expect("failed to generate tray menu");
+                        }
                         self.version_items.borrow_mut().push((item, status.version.clone()));
                         if !status.running {
                             let mut item = nwg::MenuItem::default();
@@ -257,7 +267,7 @@ fn launch_minecraft(config: &Config, state: &Result<State, Error>) -> Result<(),
         Some(version_override.clone())
     } else {
         let (_, world_status) = state.as_ref().map_err(|e| LaunchError::State { display: e.to_string(), debug: format!("{e:?}") })?;
-        world_status.get(MAIN_WORLD).map(|world_status| world_status.version.clone())
+        world_status.get(MAIN_WORLD).and_then(|world_status| world_status.version.clone())
     };
     let portablemc_work_dir = if let Some(ferium_profile) = config.ferium.profiles.get(MAIN_WORLD) {
         if let Some(ref game_version) = game_version {
@@ -418,10 +428,11 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_
                     let mut modified = false;
                     for (profile_id, world_name) in &config.version_match {
                         let launcher_profile = launcher_data.profiles.get_mut(profile_id).ok_or_else(|| Error::UnknownLauncherProfile(profile_id.clone()))?;
-                        let world_version = &statuses[world_name].version;
-                        if launcher_profile.last_version_id != *world_version {
-                            launcher_profile.last_version_id = world_version.clone();
-                            modified = true;
+                        if let Some(world_version) = &statuses[world_name].version {
+                            if launcher_profile.last_version_id != *world_version {
+                                launcher_profile.last_version_id = world_version.clone();
+                                modified = true;
+                            }
                         }
                     }
                     if modified {

@@ -1,6 +1,6 @@
 [package]
 name = "systray-wurstmineberg-status"
-version = "2.5.0"
+version = "2.5.1"
 authors = ["Fenhl <fenhl@fenhl.net>"]
 edition = "2021"
 repository = "https://github.com/wurstmineberg/systray"
