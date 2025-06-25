@@ -2,7 +2,7 @@
 name = "systray-wurstmineberg-status"
 version = "2.5.1"
 authors = ["Fenhl <fenhl@fenhl.net>"]
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/wurstmineberg/systray"
 
 [lints.rust]
