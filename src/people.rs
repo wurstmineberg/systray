@@ -16,7 +16,7 @@ impl PeopleFileVersion {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("people file returned from API has version {0} but this app only supports version {}", PeopleFileVersion::CURRENT)]
+#[error("people file returned from API has version {} but this app only supports version {}", .0, PeopleFileVersion::CURRENT)]
 struct PeopleFileVersionError(u8);
 
 impl TryFrom<u8> for PeopleFileVersion {
