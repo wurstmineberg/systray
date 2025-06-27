@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "systray-wurstmineberg-status"
-version = "2.5.1"
+version = "2.5.2"
 dependencies = [
  "clap",
  "directories",

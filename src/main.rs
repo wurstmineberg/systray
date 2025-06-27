@@ -401,8 +401,7 @@ async fn get_state(http_client: &reqwest::Client) -> Result<State, Error> {
         .detailed_error_for_status().await?
         .json_with_text_in_error::<people::VersionedPeopleFile>().await?
         .people;
-    let statuses = http_client.get("https://wurstmineberg.de/api/v3/server/worlds.json")
-        .query(&[("list", "1")])
+    let statuses = http_client.get("https://wurstmineberg.de/api/v3/server/worlds.json?list")
         .send().await?
         .detailed_error_for_status().await?
         .json_with_text_in_error().await?;
