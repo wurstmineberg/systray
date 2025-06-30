@@ -142,7 +142,7 @@ impl SystemTray {
         let app = self.clone();
         if let Some(previous_event_handler) = self.event_handler.replace(Some(nwg::full_bind_event_handler(&self.window.handle, move |event, _, handle| match event {
             nwg::Event::OnMenuItemSelected => if handle == app.item_launch_minecraft.borrow().handle {
-                lock!(@blocking lock = app.state; launch_minecraft(&app.config, lock.as_ref().expect("missing server state")).expect("failed to launch Minecraft"));
+                lock!(@blocking lock = app.state; launch_minecraft(&app.config, lock.as_ref().expect("missing server state"), false).expect("failed to launch Minecraft"));
             } else if handle == app.item_exit.borrow().handle {
                 app.exit();
             } else {
@@ -240,7 +240,7 @@ impl SystemTray {
 
     fn click(&self) {
         if self.config.left_click_launch {
-            lock!(@blocking lock = self.state; launch_minecraft(&self.config, lock.as_ref().expect("missing server state")).expect("failed to launch Minecraft"));
+            lock!(@blocking lock = self.state; launch_minecraft(&self.config, lock.as_ref().expect("missing server state"), false).expect("failed to launch Minecraft"));
         }
     }
 
@@ -262,7 +262,7 @@ enum LaunchError {
     },
 }
 
-fn launch_minecraft(config: &Config, state: &Result<State, Error>) -> Result<(), LaunchError> {
+fn launch_minecraft(config: &Config, state: &Result<State, Error>, wait: bool) -> Result<(), LaunchError> {
     let game_version = if let Some(ref version_override) = config.ferium.version_override {
         Some(version_override.clone())
     } else {
@@ -331,7 +331,10 @@ fn launch_minecraft(config: &Config, state: &Result<State, Error>) -> Result<(),
         cmd.arg("--login");
         cmd.arg(portablemc_login);
         cmd.release_create_no_window();
-        cmd.spawn().at_command("python -m portablemc")?;
+        let child = cmd.spawn().at_command("python -m portablemc")?;
+        if wait {
+            child.check("python -m portablemc")?;
+        }
     } else {
         let mut prism_command = Command::new("prismlauncher");
         if let Some(ref instance) = config.prism_instance {
@@ -339,17 +342,24 @@ fn launch_minecraft(config: &Config, state: &Result<State, Error>) -> Result<(),
             prism_command.arg(instance);
         }
         match prism_command.release_create_no_window().spawn() {
-            Ok(_) => {}
+            Ok(child) => if wait {
+                child.check("prismlauncher")?;
+            },
             Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
                 .release_create_no_window()
                 .spawn()
             {
-                Ok(_) => {}
+                Ok(child) => if wait {
+                    child.check("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")?;
+                },
                 Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                    Command::new("explorer")
+                    let child = Command::new("explorer")
                         .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
                         .release_create_no_window()
                         .spawn().at_command("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
+                    if wait {
+                        child.check("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
+                    }
                 }
                 Err(e) => return Err(e).at_command("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe").map_err(LaunchError::from),
             },
@@ -485,7 +495,10 @@ impl Args {
 
 #[derive(clap::Subcommand)]
 enum Subcommand {
-    Launch,
+    Launch {
+        #[clap(long)]
+        no_wait: bool,
+    },
 }
 
 fn gui_main(args: Args) -> Result<(), GuiMainError> {
@@ -516,8 +529,8 @@ fn main(args: Args) -> Result<(), CliMainError> {
         None => if let Err(e) = gui_main(args) {
             nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
         },
-        Some(Subcommand::Launch) => Runtime::new()?.block_on(async move {
-            launch_minecraft(&args.to_config()?, &Ok(get_state(&get_http_client()?).await?))?;
+        Some(Subcommand::Launch { no_wait }) => Runtime::new()?.block_on(async move {
+            launch_minecraft(&args.to_config()?, &Ok(get_state(&get_http_client()?).await?), !no_wait)?;
             Ok::<_, CliMainError>(())
         })?,
     }
