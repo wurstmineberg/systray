@@ -142,7 +142,9 @@ impl SystemTray {
         let app = self.clone();
         if let Some(previous_event_handler) = self.event_handler.replace(Some(nwg::full_bind_event_handler(&self.window.handle, move |event, _, handle| match event {
             nwg::Event::OnMenuItemSelected => if handle == app.item_launch_minecraft.borrow().handle {
-                lock!(@blocking lock = app.state; launch_minecraft(&app.config, lock.as_ref().expect("missing server state"), false).expect("failed to launch Minecraft"));
+                if let Err(e) = lock!(@blocking lock = app.state; launch_minecraft(&app.config, lock.as_ref().expect("missing server state"), false)) {
+                    nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = launch_minecraft, {e:?}"))
+                }
             } else if handle == app.item_exit.borrow().handle {
                 app.exit();
             } else {
@@ -240,7 +242,9 @@ impl SystemTray {
 
     fn click(&self) {
         if self.config.left_click_launch {
-            lock!(@blocking lock = self.state; launch_minecraft(&self.config, lock.as_ref().expect("missing server state"), false).expect("failed to launch Minecraft"));
+            if let Err(e) = lock!(@blocking lock = self.state; launch_minecraft(&self.config, lock.as_ref().expect("missing server state"), false)) {
+                nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = launch_minecraft, {e:?}"))
+            }
         }
     }
 
