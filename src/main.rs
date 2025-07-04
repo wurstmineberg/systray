@@ -525,6 +525,11 @@ enum CliMainError {
 
 #[wheel::main]
 fn main(args: Args) -> Result<(), CliMainError> {
+    let default_panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        nwg::error_message("Wurstmineberg: thread panic", &format!("Debug info: {info:?}"));
+        default_panic_hook(info)
+    }));
     match args.subcommand {
         None => if let Err(e) = gui_main(args) {
             nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
