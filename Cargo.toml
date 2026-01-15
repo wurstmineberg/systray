@@ -1,6 +1,6 @@
 [package]
 name = "systray-wurstmineberg-status"
-version = "2.6.2"
+version = "2.7.0"
 authors = ["Fenhl <fenhl@fenhl.net>"]
 edition = "2024"
 repository = "https://github.com/wurstmineberg/systray"
@@ -23,6 +23,9 @@ strip = true
 [dependencies]
 clap = { version = "4.4.18", features = ["derive"] }
 directories = "6"
+futures = "0.3.31"
+iced = { version = "0.13.1", features = ["image", "tokio"] }
+image = { version = "0.24", default-features = false, features = ["ico"] } # transitive dependency of iced, will be updated in the next release after 0.13.1 (https://github.com/iced-rs/iced/pull/2716)
 itertools = "0.14"
 log-lock = { git = "https://github.com/fenhl/log-lock", branch = "main" }
 native-windows-derive = "1.0.5"
@@ -33,9 +36,11 @@ reqwest = { version = "0.12", default-features = false, features = ["charset", "
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = { package = "serde_json_path_to_error", version = "0.1" }
 serenity = { version = "0.12.0", default-features = false }
+smart-default = "0.7.1"
 thiserror = "2"
-tokio = { version = "1.35.1", features = ["rt-multi-thread", "time"] }
-wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["serde", "serde_json", "reqwest"] }
+tokio = { version = "1.35.1", features = ["process", "rt-multi-thread", "sync", "time"] }
+tokio-stream = { version = "0.1.17", features = ["sync"] }
+wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["gui", "serde", "serde_json", "reqwest"] }
 
 [build-dependencies]
 winresource = "0.1"

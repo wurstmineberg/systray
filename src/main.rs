@@ -4,9 +4,6 @@ use {
     std::{
         cell::RefCell,
         collections::HashMap,
-        io::prelude::*,
-        path::PathBuf,
-        process::Command,
         rc::Rc,
         sync::Arc,
         time::Duration,
@@ -21,19 +18,19 @@ use {
     },
     open::that as open,
     serde::Deserialize,
+    smart_default::SmartDefault,
     tokio::{
         io,
         runtime::Runtime,
+        sync::broadcast,
         time::sleep,
     },
     wheel::{
         fs,
         traits::{
-            CommandExt as _,
-            IoResultExt as _,
             IsNetworkError,
             ReqwestResponseExt as _,
-            SyncCommandOutputExt as _,
+            SendResultExt as _,
         },
     },
     crate::{
@@ -46,12 +43,13 @@ use {
 };
 
 mod config;
+mod gui;
 mod launcher;
 mod people;
 
 const MAIN_WORLD: &str = "wurstmineberg";
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct WorldStatus {
     #[serde(default)]
     list: Vec<Uid>,
@@ -61,11 +59,14 @@ struct WorldStatus {
 
 type State = (HashMap<Uid, Person>, HashMap<String, WorldStatus>);
 
-#[derive(Default, nwd::NwgUi)]
+#[derive(SmartDefault, nwd::NwgUi)]
 pub struct SystemTray {
+    #[default(broadcast::Sender::new(1))]
+    gui_tx: broadcast::Sender<gui::Message>,
+    #[default(Runtime::new().ok())]
     runtime: Option<Runtime>,
     config: Config,
-    state: Arc<Mutex<Option<Result<State, Error>>>>,
+    state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>,
     #[nwg_control]
     #[nwg_events(OnInit: [SystemTray::init])]
     window: nwg::MessageWindow,
@@ -142,9 +143,11 @@ impl SystemTray {
         let app = self.clone();
         if let Some(previous_event_handler) = self.event_handler.replace(Some(nwg::full_bind_event_handler(&self.window.handle, move |event, _, handle| match event {
             nwg::Event::OnMenuItemSelected => if handle == app.item_launch_minecraft.borrow().handle {
-                if let Err(e) = lock!(@blocking lock = app.state; launch_minecraft(&app.config, lock.as_ref().expect("missing server state"), false)) {
-                    nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = launch_minecraft, {e:?}"))
-                }
+                lock!(@blocking lock = app.state; app.gui_tx.send(gui::Message::LaunchMinecraft {
+                    config: Some(app.config.clone()),
+                    state: Some(lock.as_ref().expect("missing server state").clone()),
+                    wait: false,
+                }).allow_unreceived());
             } else if handle == app.item_exit.borrow().handle {
                 app.exit();
             } else {
@@ -242,137 +245,19 @@ impl SystemTray {
 
     fn click(&self) {
         if self.config.left_click_launch {
-            if let Err(e) = lock!(@blocking lock = self.state; launch_minecraft(&self.config, lock.as_ref().expect("missing server state"), false)) {
-                nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = launch_minecraft, {e:?}"))
-            }
+            lock!(@blocking lock = self.state; self.gui_tx.send(gui::Message::LaunchMinecraft {
+                config: Some(self.config.clone()),
+                state: Some(lock.as_ref().expect("missing server state").clone()),
+                wait: false,
+            }).allow_unreceived());
         }
     }
 
     fn exit(&self) {
+        self.gui_tx.send(gui::Message::Exit).allow_unreceived();
         nwg::stop_thread_dispatch();
     }
 }
-
-#[derive(Debug, thiserror::Error)]
-enum LaunchError {
-    #[error(transparent)] Utf8(#[from] std::string::FromUtf8Error),
-    #[error(transparent)] Wheel(#[from] wheel::Error),
-    #[error("failed to parse `ferium profile` command output")]
-    FeriumProfileFormat,
-    #[error("{display}")]
-    State {
-        display: String,
-        debug: String,
-    },
-}
-
-fn launch_minecraft(config: &Config, state: &Result<State, Error>, wait: bool) -> Result<(), LaunchError> {
-    let game_version = if let Some(ref version_override) = config.ferium.version_override {
-        Some(version_override.clone())
-    } else {
-        let (_, world_status) = state.as_ref().map_err(|e| LaunchError::State { display: e.to_string(), debug: format!("{e:?}") })?;
-        world_status.get(MAIN_WORLD).and_then(|world_status| world_status.version.clone())
-    };
-    let portablemc_work_dir = if let Some(ferium_profile) = config.ferium.profiles.get(MAIN_WORLD) {
-        if let Some(ref game_version) = game_version {
-            let previous_profile = config.ferium.command()
-                .arg("profile")
-                .release_create_no_window()
-                .check("ferium profile")?
-                .stdout;
-            let mut previous_profile = String::from_utf8(previous_profile)?;
-            previous_profile.truncate(previous_profile.find(" *").ok_or(LaunchError::FeriumProfileFormat)?);
-            config.ferium.command()
-                .arg("profile")
-                .arg("switch")
-                .arg(ferium_profile)
-                .release_create_no_window()
-                .check("ferium profile switch")?;
-            let current_profile = config.ferium.command()
-                .arg("profile")
-                .release_create_no_window()
-                .check("ferium profile")?
-                .stdout;
-            config.ferium.command()
-                .arg("profile")
-                .arg("configure")
-                .arg("--game-version")
-                .arg(game_version)
-                .release_create_no_window()
-                .check("ferium profile configure --game-version")?;
-            config.ferium.command()
-                .arg("upgrade")
-                .release_create_no_window()
-                .check("ferium upgrade")?;
-            config.ferium.command()
-                .arg("profile")
-                .arg("switch")
-                .arg(previous_profile)
-                .release_create_no_window()
-                .check("ferium profile switch")?;
-            current_profile.lines().find_map(|line| line.ok().and_then(|line| line.strip_prefix("        \r  Output directory:   ").map(|dir| {
-                let mut dir = PathBuf::from(dir);
-                dir.pop();
-                dir
-            })))
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-    if let Some(ref portablemc_login) = config.portablemc.login {
-        let mut cmd = Command::new("python");
-        cmd.arg("-m");
-        cmd.arg("portablemc");
-        if let Some(work_dir) = portablemc_work_dir {
-            cmd.arg("--work-dir");
-            cmd.arg(work_dir);
-        }
-        cmd.arg("start");
-        cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
-        cmd.arg("--server=wurstmineberg.de");
-        cmd.arg("--login");
-        cmd.arg(portablemc_login);
-        cmd.release_create_no_window();
-        let child = cmd.spawn().at_command("python -m portablemc")?;
-        if wait {
-            child.check("python -m portablemc")?;
-        }
-    } else {
-        let mut prism_command = Command::new("prismlauncher");
-        if let Some(ref instance) = config.prism_instance {
-            prism_command.arg("--show");
-            prism_command.arg(instance);
-        }
-        match prism_command.release_create_no_window().spawn() {
-            Ok(child) => if wait {
-                child.check("prismlauncher")?;
-            },
-            Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
-                .release_create_no_window()
-                .spawn()
-            {
-                Ok(child) => if wait {
-                    child.check("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")?;
-                },
-                Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                    let child = Command::new("explorer")
-                        .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
-                        .release_create_no_window()
-                        .spawn().at_command("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
-                    if wait {
-                        child.check("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
-                    }
-                }
-                Err(e) => return Err(e).at_command("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe").map_err(LaunchError::from),
-            },
-            Err(e) => return Err(e).at_command("prismlauncher").map_err(LaunchError::from),
-        }
-    }
-    Ok(())
-}
-
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -422,7 +307,7 @@ async fn get_state(http_client: &reqwest::Client) -> Result<State, Error> {
     Ok((people, statuses))
 }
 
-async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_notifier: nwg::NoticeSender) -> Result<(), Error> {
+async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) -> Result<(), Error> {
     let http_client = get_http_client()?;
     loop {
         let config = Config::load().await?; //TODO update config field of app? (make sure to keep overrides from CLI args)
@@ -459,23 +344,16 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Error>>>>, update_
             Err(e) if e.is_network_error() => Err(e),
             Err(e) => return Err(e),
         };
-        lock!(state = state; *state = Some(new_state));
+        lock!(state = state; *state = Some(new_state.map_err(Arc::new)));
         update_notifier.notice();
         sleep(Duration::from_secs(45)).await;
     }
 }
 
-async fn maintain(state: Arc<Mutex<Option<Result<State, Error>>>>, update_notifier: nwg::NoticeSender) {
+async fn maintain(state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) {
     if let Err(e) = maintain_inner(state, update_notifier).await {
         nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = maintain, {e:?}"))
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-enum GuiMainError {
-    #[error(transparent)] Config(#[from] config::Error),
-    #[error(transparent)] Io(#[from] io::Error),
-    #[error(transparent)] Nwg(#[from] nwg::NwgError),
 }
 
 #[derive(clap::Parser)]
@@ -505,11 +383,18 @@ enum Subcommand {
     },
 }
 
-fn gui_main(args: Args) -> Result<(), GuiMainError> {
+#[derive(Debug, thiserror::Error)]
+enum GuiMainError {
+    #[error(transparent)] Config(#[from] config::Error),
+    #[error(transparent)] Io(#[from] io::Error),
+    #[error(transparent)] Nwg(#[from] nwg::NwgError),
+}
+
+fn gui_main(args: Args, gui_tx: broadcast::Sender<gui::Message>) -> Result<(), GuiMainError> {
     nwg::init()?;
     let app = SystemTray::build_ui(SystemTray {
-        runtime: Some(Runtime::new()?),
         config: args.to_config()?,
+        gui_tx,
         ..SystemTray::default()
     })?;
     nwg::dispatch_thread_events();
@@ -517,31 +402,25 @@ fn gui_main(args: Args) -> Result<(), GuiMainError> {
     Ok(())
 }
 
-#[derive(Debug, thiserror::Error)]
-enum CliMainError {
-    #[error(transparent)] Config(#[from] config::Error),
-    #[error(transparent)] Http(#[from] reqwest::Error),
-    #[error(transparent)] Io(#[from] io::Error),
-    #[error(transparent)] Launch(#[from] LaunchError),
-    #[error(transparent)] State(#[from] Error),
-    #[error(transparent)] Utf8(#[from] std::string::FromUtf8Error),
-}
-
 #[wheel::main]
-fn main(args: Args) -> Result<(), CliMainError> {
+fn main(args: Args) {
     let default_panic_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         nwg::error_message("Wurstmineberg: thread panic", &format!("Debug info: {info:?}"));
         default_panic_hook(info)
     }));
     match args.subcommand {
-        None => if let Err(e) = gui_main(args) {
-            nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
+        None => {
+            let (tx, rx) = broadcast::channel(32);
+            std::thread::spawn(move || if let Err(e) = gui_main(args, tx) {
+                nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
+            });
+            if let Err(e) = gui::run(gui::Args::Default { rx }) {
+                nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
+            }
+        }
+        Some(Subcommand::Launch { no_wait }) => if let Err(e) = gui::run(gui::Args::Launch { wait: !no_wait }) {
+            nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
         },
-        Some(Subcommand::Launch { no_wait }) => Runtime::new()?.block_on(async move {
-            launch_minecraft(&args.to_config()?, &Ok(get_state(&get_http_client()?).await?), !no_wait)?;
-            Ok::<_, CliMainError>(())
-        })?,
     }
-    Ok(())
 }

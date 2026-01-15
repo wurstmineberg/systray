@@ -38,12 +38,12 @@ pub(crate) struct VersionedPeopleFile {
     pub(crate) people: HashMap<Uid, Person>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Person {
     pub(crate) name: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum Uid {
     Snowflake(UserId),

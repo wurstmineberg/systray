@@ -2,17 +2,17 @@ use {
     std::{
         collections::HashMap,
         fs,
-        process::Command,
     },
     directories::BaseDirs,
     serde::Deserialize,
+    tokio::process::Command,
     wheel::traits::IoResultExt as _,
     crate::Uid,
 };
 
 fn make_true() -> bool { true }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Config {
     #[serde(default)]
@@ -73,7 +73,7 @@ impl Default for Config {
 }
 
 /// Configuration for <https://github.com/gorilla-devs/ferium>
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Ferium {
     /// Maps Wurstmineberg world names to ferium profile names.
@@ -95,7 +95,7 @@ impl Ferium {
 }
 
 /// Configuration for <https://pypi.org/project/portablemc/>
-#[derive(Default, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct PortableMc {
     /// Login email address. If this is specified, Minecraft will be launched using portablemc.
     pub(crate) login: Option<String>,
