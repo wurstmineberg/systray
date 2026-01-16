@@ -69,9 +69,6 @@ If [pre-built binaries](https://github.com/fenhl/melt#installation) are not avai
 # Publishing a new version
 
 1. Increment the `version` field in `Cargo.toml`. (Try to loosely follow [semantic versioning](https://semver.org/) with respect to the installation and usage sections above.)
-2. Run `cargo build --release --target=aarch64-pc-windows-msvc --target=x86_64-pc-windows-msvc --target=i686-pc-windows-msvc`
-3. Commit and push the changes (this needs to be done after the `cargo build` step so the version in `Cargo.lock` gets updated)
-4. [Create a new release](https://github.com/wurstmineberg/systray/releases/new) with the tag and title matching the version, a summary of new features and notable bugfixes, and the following attachments:
-    * `target\aarch64-pc-windows-msvc\release\systray-wurstmineberg-status.exe` as `wurstmineberg-arm.exe`
-    * `target\x86_64-pc-windows-msvc\release\systray-wurstmineberg-status.exe` as `wurstmineberg-x64.exe`
-    * `target\i686-pc-windows-msvc\release\systray-wurstmineberg-status.exe` as `wurstmineberg-x86.exe`
+2. Ensure the version in `Cargo.lock` is updated (run `cargo check` if not)
+3. Commit and push the changes
+4. Run `cargo +nightly -Zscript .\assets\release.rs`
