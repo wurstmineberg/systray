@@ -32,7 +32,7 @@ native-windows-derive = "1.0.5"
 native-windows-gui = { version = "1.0.13", default-features = false, features = ["tray-notification", "high-dpi", "cursor", "message-window", "menu", "notice", "embed-resource"] }
 open = "5.0.1"
 registry = "1.2.3"
-reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "rustls-tls"] }
+reqwest = { version = "0.13", default-features = false, features = ["charset", "gzip", "http2", "rustls", "system-proxy"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = { package = "serde_json_path_to_error", version = "0.1" }
 serenity = { version = "0.12.0", default-features = false }
@@ -40,7 +40,7 @@ smart-default = "0.7.1"
 thiserror = "2"
 tokio = { version = "1.35.1", features = ["process", "rt-multi-thread", "sync", "time"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
-wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["gui", "serde", "serde_json", "reqwest"] }
+wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["gui", "serde_json", "reqwest"] }
 
 [build-dependencies]
 winresource = "0.1"
