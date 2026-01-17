@@ -1,6 +1,7 @@
 use {
     std::{
         collections::HashMap,
+        hash::Hash,
         io::prelude::*,
         iter,
         path::PathBuf,
@@ -300,12 +301,24 @@ pub(crate) enum Args {
     },
 }
 
+struct RxWrapper(broadcast::Receiver<Message>);
+
+impl Hash for RxWrapper {
+    fn hash<H: std::hash::Hasher>(&self, _: &mut H) {}
+}
+
 pub(crate) fn run(args: Args) -> iced::Result {
+    fn theme(_: &Gui, _: window::Id) -> Option<Theme> { wheel::gui::theme() }
+
     let standalone = match args { Args::Default { .. } => None, Args::Launch { wait } => Some(wait) };
-    iced::daemon(Gui::title, Gui::update, Gui::view)
+    iced::daemon(move || (
+        Gui::default(),
+        if let Some(wait) = standalone { Task::done(Message::LaunchMinecraft { config: None, state: None, wait }) } else { Task::none() },
+    ), Gui::update, Gui::view)
+        .title(Gui::title)
         .subscription(move |_| Subscription::batch(
             if let Args::Default { rx } = &args {
-                Some(Subscription::run_with_id((), BroadcastStream::new(rx.resubscribe()).map(|res| res.unwrap_or_else(|e| Message::CommandError(Arc::new(e.into()))))))
+                Some(Subscription::run_with(RxWrapper(rx.resubscribe()), |RxWrapper(rx)| BroadcastStream::new(rx.resubscribe()).map(|res| res.unwrap_or_else(|e| Message::CommandError(Arc::new(e.into()))))))
             } else {
                 None
             }.into_iter()
@@ -315,10 +328,7 @@ pub(crate) fn run(args: Args) -> iced::Result {
                 None
             })))
         ))
-        .theme(|_, _| wheel::gui::theme())
+        .theme(theme)
         .default_font(iced::Font::with_name("DejaVu Sans"))
-        .run_with(move || (
-            Gui::default(),
-            if let Some(wait) = standalone { Task::done(Message::LaunchMinecraft { config: None, state: None, wait }) } else { Task::none() },
-        ))
+        .run()
 }
