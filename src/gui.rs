@@ -132,7 +132,27 @@ async fn launch_minecraft(config: Option<Config>, state: Option<Result<State, Ar
     } else {
         None
     };
-    if let Some(ref portablemc_login) = config.portablemc.login {
+    if let Some(ref portablemc_uuid) = config.portablemc.uuid {
+        let mut cmd = Command::new("portablemc");
+        cmd.arg("portablemc");
+        cmd.arg("start");
+        if let Some(work_dir) = portablemc_work_dir {
+            cmd.arg("--mc-dir");
+            cmd.arg(work_dir);
+        }
+        cmd.arg("--auth");
+        cmd.arg("--uuid");
+        cmd.arg(portablemc_uuid.to_string());
+        cmd.arg("--join-server=wurstmineberg.de");
+        cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
+        cmd.release_create_no_window();
+        cmd.kill_on_drop(true);
+        let child = cmd.spawn().at_command("portablemc")?;
+        if wait {
+            tx.send(Message::Progress(window, "launching Minecraft via new portablemc")).await.allow_unreceived();
+            child.check("portablemc").await?;
+        }
+    } else if let Some(ref portablemc_email) = config.portablemc.email {
         let mut cmd = Command::new("python");
         cmd.arg("-m");
         cmd.arg("portablemc");
@@ -144,12 +164,12 @@ async fn launch_minecraft(config: Option<Config>, state: Option<Result<State, Ar
         cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
         cmd.arg("--server=wurstmineberg.de");
         cmd.arg("--login");
-        cmd.arg(portablemc_login);
+        cmd.arg(portablemc_email);
         cmd.release_create_no_window();
         cmd.kill_on_drop(true);
         let child = cmd.spawn().at_command("python -m portablemc")?;
         if wait {
-            tx.send(Message::Progress(window, "launching Minecraft via portablemc")).await.allow_unreceived();
+            tx.send(Message::Progress(window, "launching Minecraft via old portablemc")).await.allow_unreceived();
             child.check("python -m portablemc").await?;
         }
     } else {

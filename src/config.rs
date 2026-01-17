@@ -6,6 +6,7 @@ use {
     directories::BaseDirs,
     serde::Deserialize,
     tokio::process::Command,
+    uuid::Uuid,
     wheel::traits::IoResultExt as _,
     crate::Uid,
 };
@@ -94,9 +95,12 @@ impl Ferium {
     }
 }
 
-/// Configuration for <https://pypi.org/project/portablemc/>
+/// Configuration for <https://github.com/mindstorm38/portablemc>
 #[derive(Debug, Default, Clone, Deserialize)]
 pub(crate) struct PortableMc {
-    /// Login email address. If this is specified, Minecraft will be launched using portablemc.
-    pub(crate) login: Option<String>,
+    /// Login email address. If this is specified and `uuid` is not, Minecraft will be launched using portablemc 4.
+    #[serde(alias = "login")] // previous name of this field
+    pub(crate) email: Option<String>,
+    /// Login UUID. If this is specified, Minecraft will be launched using portablemc 5.
+    pub(crate) uuid: Option<Uuid>,
 }
