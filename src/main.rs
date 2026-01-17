@@ -65,6 +65,7 @@ pub struct SystemTray {
     gui_tx: broadcast::Sender<gui::Message>,
     #[default(Runtime::new().ok())]
     runtime: Option<Runtime>,
+    http_client: reqwest::Client,
     config: Config,
     state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>,
     #[nwg_control]
@@ -100,7 +101,7 @@ pub struct SystemTray {
 impl SystemTray {
     fn init(&self) {
         self.set_icon();
-        self.runtime.as_ref().unwrap().spawn(maintain(self.state.clone(), self.update_notice.sender()));
+        self.runtime.as_ref().unwrap().spawn(maintain(self.http_client.clone(), self.state.clone(), self.update_notice.sender()));
     }
 
     fn set_icon(&self) {
@@ -284,16 +285,6 @@ impl IsNetworkError for Error {
     }
 }
 
-fn get_http_client() -> reqwest::Result<reqwest::Client> {
-    reqwest::Client::builder()
-        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"), " (", env!("CARGO_PKG_REPOSITORY"), ")"))
-        .timeout(Duration::from_secs(30))
-        .use_rustls_tls()
-        .https_only(true)
-        .http2_prior_knowledge()
-        .build()
-}
-
 async fn get_state(http_client: &reqwest::Client) -> Result<State, Error> {
     let people = http_client.get("https://wurstmineberg.de/api/v3/people.json")
         .send().await?
@@ -307,8 +298,7 @@ async fn get_state(http_client: &reqwest::Client) -> Result<State, Error> {
     Ok((people, statuses))
 }
 
-async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) -> Result<(), Error> {
-    let http_client = get_http_client()?;
+async fn maintain_inner(http_client: &reqwest::Client, state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) -> Result<(), Error> {
     loop {
         let config = Config::load().await?; //TODO update config field of app? (make sure to keep overrides from CLI args)
         let new_state = match get_state(&http_client).await {
@@ -350,8 +340,8 @@ async fn maintain_inner(state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, up
     }
 }
 
-async fn maintain(state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) {
-    if let Err(e) = maintain_inner(state, update_notifier).await {
+async fn maintain(http_client: reqwest::Client, state: Arc<Mutex<Option<Result<State, Arc<Error>>>>>, update_notifier: nwg::NoticeSender) {
+    if let Err(e) = maintain_inner(&http_client, state, update_notifier).await {
         nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = maintain, {e:?}"))
     }
 }
@@ -390,11 +380,11 @@ enum GuiMainError {
     #[error(transparent)] Nwg(#[from] nwg::NwgError),
 }
 
-fn gui_main(args: Args, gui_tx: broadcast::Sender<gui::Message>) -> Result<(), GuiMainError> {
+fn gui_main(http_client: reqwest::Client, args: Args, gui_tx: broadcast::Sender<gui::Message>) -> Result<(), GuiMainError> {
     nwg::init()?;
     let app = SystemTray::build_ui(SystemTray {
         config: args.to_config()?,
-        gui_tx,
+        gui_tx, http_client,
         ..SystemTray::default()
     })?;
     nwg::dispatch_thread_events();
@@ -409,17 +399,30 @@ fn main(args: Args) {
         nwg::error_message("Wurstmineberg: thread panic", &format!("Debug info: {info:?}"));
         default_panic_hook(info)
     }));
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let http_client = match reqwest::Client::builder()
+        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"), " (", env!("CARGO_PKG_REPOSITORY"), ")"))
+        .timeout(Duration::from_secs(30))
+        .tls_backend_rustls()
+        .https_only(true)
+        .http2_prior_knowledge()
+        .build()
+    {
+        Ok(http_client) => http_client,
+        Err(e) => nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = http_client, {e:?}")),
+    };
     match args.subcommand {
         None => {
             let (tx, rx) = broadcast::channel(32);
-            std::thread::spawn(move || if let Err(e) = gui_main(args, tx) {
+            let tray_http_client = http_client.clone();
+            std::thread::spawn(move || if let Err(e) = gui_main(tray_http_client, args, tx) {
                 nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
             });
-            if let Err(e) = gui::run(gui::Args::Default { rx }) {
+            if let Err(e) = gui::run(http_client, gui::Args::Default { rx }) {
                 nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
             }
         }
-        Some(Subcommand::Launch { no_wait }) => if let Err(e) = gui::run(gui::Args::Launch { wait: !no_wait }) {
+        Some(Subcommand::Launch { no_wait }) => if let Err(e) = gui::run(http_client, gui::Args::Launch { wait: !no_wait }) {
             nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
         },
     }
