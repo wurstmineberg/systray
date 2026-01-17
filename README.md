@@ -22,8 +22,9 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 # Usage
 
 * The icon only appears as long as someone is online on one of our worlds. You can hover over it to see how many people are online (and if it's only one player, their name).
-* You can left-click on the icon to start Minecraft. This supports [portablemc](https://pypi.org/project/portablemc/), [Prism Launcher](https://prismlauncher.org/), and the official Minecraft launcher.
-    * For portablemc to be used, the `.portablemc.login` [configuration](#configuration) entry must be specified.
+* You can left-click on the icon to start Minecraft. This supports [portablemc](https://github.com/mindstorm38/portablemc), [Prism Launcher](https://prismlauncher.org/), and the official Minecraft launcher.
+    * For portablemc version 5 (`cargo install portablemc-cli`) to be used, the `.portablemc.uuid` [configuration](#configuration) entry must be set to your [Minecraft UUID](https://mcuuid.net/).
+    * For portablemc version 4 (`python -m pip pip install --user portablemc[certifi]`) or older to be used, the `.portablemc.uuid` [configuration](#configuration) entry must be unset and `.portablemc.email` or `.portablemc.login` must be set to your Minecraft account's email address.
     * For Prism Launcher to be used, it must be available on the `PATH`. If Prism Launcher is installed via [Scoop](https://scoop.sh/), this should be the case by default.
     * The official Minecraft launcher is the fallback if the conditions for using neither portablemc nor Prism Launcher are met. Both the new Microsoft Store launcher and the old launcher are supported.
 * You can right-click on the icon to see the active worlds, their current versions (each with a link to the [Minecraft Wiki](https://minecraft.wiki/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
@@ -44,7 +45,8 @@ You can optionally configure the behavior of the app by creating a [JSON](https:
     * `versionOverride`: A Minecraft version to use instead of syncing to the world's version.
     * `githubToken`: GitHub personal access token that will be passed to ferium.
 * `portablemc`: Optional configuration for [portablemc](https://pypi.org/project/portablemc/):
-    * `login`: Login email address. If this is specified, Minecraft will be launched using portablemc instead of trying Prism Launcher or the official Minecraft Launcher. Use `python -m portablemc login` to configure this before the first launch.
+    * `uuid`: Login [Minecraft UUID](https://mcuuid.net/). If this is specified, Minecraft will be launched using modern portablemc instead of trying legacy portablemc, Prism Launcher, or the official Minecraft Launcher. Use `portablemc auth login` to configure this before the first launch.
+    * `email` (or `login`): Login email address. If this is specified and `uuid` is not, Minecraft will be launched using legacy portablemc installed via pip instead of trying Prism Launcher or the official Minecraft Launcher. Use `python -m portablemc login` to configure this before the first launch.
 
 # Building from source
 
