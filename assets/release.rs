@@ -137,7 +137,7 @@ async fn main() -> Result<(), Error> {
     repo.release_attach(&http_client, &release, "wurstmineberg-x64.exe", "application/vnd.microsoft.portable-executable", fs::read("target/x86_64-pc-windows-msvc/release/systray-wurstmineberg-status.exe").await?).await?;
     repo.release_attach(&http_client, &release, "wurstmineberg-x86.exe", "application/vnd.microsoft.portable-executable", fs::read("target/i686-pc-windows-msvc/release/systray-wurstmineberg-status.exe").await?).await?;
     repo.publish_release(&http_client, release).await?;
-    Command::new("cargo").arg("+stable").arg("install-update").arg("--git").arg("systray-wurstmineberg-status").check("cargo install-update").await?;
+    Command::new("cargo").arg("+stable").arg("install-update").arg("--git").arg("systray-wurstmineberg-status").spawn().at("cargo install-update")?.check("cargo install-update").await?;
     let bin_path = UserDirs::new().ok_or(Error::MissingHomeDir)?.home_dir().join(".cargo").join("bin").join("systray-wurstmineberg-status");
     open(&bin_path).at(bin_path)?;
     Ok(())
