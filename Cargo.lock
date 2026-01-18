@@ -4722,7 +4722,7 @@ dependencies = [
 
 [[package]]
 name = "systray-wurstmineberg-status"
-version = "2.8.0"
+version = "2.9.0"
 dependencies = [
  "clap",
  "directories",
