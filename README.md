@@ -22,13 +22,15 @@ For an equivalent macOS app, see [bitbar-server-status](https://github.com/wurst
 # Usage
 
 * The icon only appears as long as someone is online on one of our worlds. You can hover over it to see how many people are online (and if it's only one player, their name).
-* You can left-click on the icon to start Minecraft. This supports [portablemc](https://github.com/mindstorm38/portablemc), [Prism Launcher](https://prismlauncher.org/), and the official Minecraft launcher.
+* You can left-click on the icon to start Minecraft and (if supported by the launcher) connect to Wurstmineberg. This supports [portablemc](https://github.com/mindstorm38/portablemc), [Prism Launcher](https://prismlauncher.org/), and the official Minecraft launcher.
     * For portablemc version 5 (`cargo install portablemc-cli`) to be used, the `.portablemc.uuid` [configuration](#configuration) entry must be set to your [Minecraft UUID](https://mcuuid.net/).
     * For portablemc version 4 (`python -m pip pip install --user portablemc[certifi]`) or older to be used, the `.portablemc.uuid` [configuration](#configuration) entry must be unset and `.portablemc.email` or `.portablemc.login` must be set to your Minecraft account's email address.
     * For Prism Launcher to be used, it must be available on the `PATH`. If Prism Launcher is installed via [Scoop](https://scoop.sh/), this should be the case by default.
     * The official Minecraft launcher is the fallback if the conditions for using neither portablemc nor Prism Launcher are met. Both the new Microsoft Store launcher and the old launcher are supported.
 * You can right-click on the icon to see the active worlds, their current versions (each with a link to the [Minecraft Wiki](https://minecraft.wiki/) article about that version), as well as the full list of everyone who's online (with links to their Wurstmineberg profiles).
 * The app can be run from the command line with the `launch` subcommand to start Minecraft (same behavior as left-clicking on the system tray icon).
+    * The `--menu` option can be added to open Minecraft's main menu instead of connecting directly to Wurstmineberg.
+* In the taskbar and Start menu, the app offers a task (shown when right-clicking it in the taskbar or pinned apps, or when selecting it as a search result) to open Minecraft's main menu.
 
 ## Configuration
 

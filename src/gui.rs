@@ -56,7 +56,7 @@ enum LaunchError {
     FeriumProfileFormat,
 }
 
-async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client, state: Option<Result<State, Arc<crate::Error>>>, wait: bool, window: window::Id, tx: mpsc::Sender<Message>) -> Result<(), LaunchError> {
+async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client, state: Option<Result<State, Arc<crate::Error>>>, menu: bool, wait: bool, window: window::Id, tx: mpsc::Sender<Message>) -> Result<(), LaunchError> {
     let config = if let Some(config) = config {
         config
     } else {
@@ -143,7 +143,9 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
         cmd.arg("--auth");
         cmd.arg("--uuid");
         cmd.arg(portablemc_uuid.to_string());
-        cmd.arg("--join-server=wurstmineberg.de");
+        if !menu {
+            cmd.arg("--join-server=wurstmineberg.de");
+        }
         cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
         cmd.release_create_no_window();
         cmd.kill_on_drop(true);
@@ -162,7 +164,9 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
         }
         cmd.arg("start");
         cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
-        cmd.arg("--server=wurstmineberg.de");
+        if !menu {
+            cmd.arg("--server=wurstmineberg.de");
+        }
         cmd.arg("--login");
         cmd.arg(portablemc_email);
         cmd.release_create_no_window();
@@ -225,6 +229,7 @@ pub(crate) enum Message {
     HandleLauncherWindow {
         config: Option<Config>,
         state: Option<Result<State, Arc<crate::Error>>>,
+        menu: bool,
         wait: bool,
         window: window::Id,
     },
@@ -232,6 +237,7 @@ pub(crate) enum Message {
     LaunchMinecraft {
         config: Option<Config>,
         state: Option<Result<State, Arc<crate::Error>>>,
+        menu: bool,
         wait: bool,
     },
     Progress(window::Id, &'static str),
@@ -266,23 +272,23 @@ impl Gui {
             }
             Message::CommandError(e) => nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui::CommandError, {e:?}")),
             Message::Exit => iced::exit(),
-            Message::HandleLauncherWindow { config, state, wait, window } => {
+            Message::HandleLauncherWindow { config, state, menu, wait, window } => {
                 let http_client = self.http_client.clone();
                 let (tx, rx) = mpsc::channel(32);
                 self.task = Some(tokio::spawn(async move {
-                    if let Err(e) = launch_minecraft(config, &http_client, state, wait, window, tx).await {
+                    if let Err(e) = launch_minecraft(config, &http_client, state, menu, wait, window, tx).await {
                         nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui::launch_minecraft, {e:?}"))
                     }
                 }));
                 Task::stream(ReceiverStream::new(rx))
             }
             Message::LaunchDone(window) => window::close(window),
-            Message::LaunchMinecraft { config, state, wait } => window::open(window::Settings {
+            Message::LaunchMinecraft { config, state, menu, wait } => window::open(window::Settings {
                 size: Size { width: 512.0, height: 128.0 },
                 icon: icon::from_file_data(include_bytes!("../assets/wurstpick.ico"), Some(::image::ImageFormat::Ico)).ok(),
                 exit_on_close_request: false,
                 ..window::Settings::default()
-            }).1.map(move |window| Message::HandleLauncherWindow { config: config.clone(), state: state.clone(), wait, window }),
+            }).1.map(move |window| Message::HandleLauncherWindow { config: config.clone(), state: state.clone(), menu, wait, window }),
             Message::Progress(window, text) => {
                 self.progress.insert(window, text);
                 Task::none()
@@ -305,6 +311,7 @@ pub(crate) enum Args {
         rx: broadcast::Receiver<Message>,
     },
     Launch {
+        menu: bool,
         wait: bool,
     },
 }
@@ -318,10 +325,10 @@ impl Hash for RxWrapper {
 pub(crate) fn run(http_client: reqwest::Client, args: Args) -> iced::Result {
     fn theme(_: &Gui, _: window::Id) -> Option<Theme> { wheel::gui::theme() }
 
-    let standalone = match args { Args::Default { .. } => None, Args::Launch { wait } => Some(wait) };
+    let standalone = match args { Args::Default { .. } => None, Args::Launch { menu, wait } => Some((menu, wait)) };
     iced::daemon(move || (
         Gui::new(http_client.clone()),
-        if let Some(wait) = standalone { Task::done(Message::LaunchMinecraft { config: None, state: None, wait }) } else { Task::none() },
+        if let Some((menu, wait)) = standalone { Task::done(Message::LaunchMinecraft { config: None, state: None, menu, wait }) } else { Task::none() },
     ), Gui::update, Gui::view)
         .title(Gui::title)
         .subscription(move |_| Subscription::batch(

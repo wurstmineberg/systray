@@ -4746,6 +4746,7 @@ dependencies = [
  "tokio-stream",
  "uuid",
  "wheel",
+ "windows 0.62.2",
  "winresource",
 ]
 

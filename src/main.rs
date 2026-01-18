@@ -4,6 +4,7 @@ use {
     std::{
         cell::RefCell,
         collections::HashMap,
+        convert::identity,
         rc::Rc,
         sync::Arc,
         time::Duration,
@@ -21,7 +22,10 @@ use {
     smart_default::SmartDefault,
     tokio::{
         io,
-        runtime::Runtime,
+        runtime::{
+            self,
+            Runtime,
+        },
         sync::broadcast,
         time::sleep,
     },
@@ -32,6 +36,10 @@ use {
             ReqwestResponseExt as _,
             SendResultExt as _,
         },
+    },
+    windows::UI::StartScreen::{
+        JumpList,
+        JumpListItem,
     },
     crate::{
         config::Config,
@@ -147,6 +155,7 @@ impl SystemTray {
                 lock!(@blocking lock = app.state; app.gui_tx.send(gui::Message::LaunchMinecraft {
                     config: Some(app.config.clone()),
                     state: Some(lock.as_ref().expect("missing server state").clone()),
+                    menu: false,
                     wait: false,
                 }).allow_unreceived());
             } else if handle == app.item_exit.borrow().handle {
@@ -249,6 +258,7 @@ impl SystemTray {
             lock!(@blocking lock = self.state; self.gui_tx.send(gui::Message::LaunchMinecraft {
                 config: Some(self.config.clone()),
                 state: Some(lock.as_ref().expect("missing server state").clone()),
+                menu: false,
                 wait: false,
             }).allow_unreceived());
         }
@@ -346,6 +356,16 @@ async fn maintain(http_client: reqwest::Client, state: Arc<Mutex<Option<Result<S
     }
 }
 
+async fn configure_jump_list() -> Result<(), windows::core::Error> {
+    let list = JumpList::LoadCurrentAsync()?.await?;
+    let items = list.Items()?;
+    let main_menu_item = JumpListItem::CreateWithArguments(&"launch --menu".into(), &"Minecraft Main Menu".into())?;
+    //TODO main_menu_item.SetLogo (how to refer to an embedded resource?)
+    items.Append(&main_menu_item)?;
+    list.SaveAsync()?.await?;
+    Ok(())
+}
+
 #[derive(clap::Parser)]
 struct Args {
     #[clap(long)]
@@ -368,6 +388,9 @@ impl Args {
 #[derive(clap::Subcommand)]
 enum Subcommand {
     Launch {
+        /// Launch into Minecraft's main menu instead of connecting directly to Wurstmineberg.
+        #[clap(long)]
+        menu: bool,
         #[clap(long)]
         no_wait: bool,
     },
@@ -380,9 +403,10 @@ enum GuiMainError {
     #[error(transparent)] Nwg(#[from] nwg::NwgError),
 }
 
-fn gui_main(http_client: reqwest::Client, args: Args, gui_tx: broadcast::Sender<gui::Message>) -> Result<(), GuiMainError> {
+fn gui_main(runtime: Runtime, http_client: reqwest::Client, args: Args, gui_tx: broadcast::Sender<gui::Message>) -> Result<(), GuiMainError> {
     nwg::init()?;
     let app = SystemTray::build_ui(SystemTray {
+        runtime: Some(runtime),
         config: args.to_config()?,
         gui_tx, http_client,
         ..SystemTray::default()
@@ -400,6 +424,15 @@ fn main(args: Args) {
         default_panic_hook(info)
     }));
     let _ = rustls::crypto::ring::default_provider().install_default();
+    let runtime = match runtime::Builder::new_multi_thread().enable_all().build() {
+        Ok(runtime) => runtime,
+        Err(e) => nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = runtime, {e:?}")),
+    };
+    if JumpList::IsSupported().is_ok_and(identity) {
+        if let Err(e) = runtime.block_on(configure_jump_list()) {
+            nwg::error_message(concat!(env!("CARGO_PKG_NAME"), ": failed to configure jump list"), &format!("{e}\nDebug info: {e:?}"));
+        }
+    }
     let http_client = match reqwest::Client::builder()
         .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"), " (", env!("CARGO_PKG_REPOSITORY"), ")"))
         .timeout(Duration::from_secs(30))
@@ -415,14 +448,14 @@ fn main(args: Args) {
         None => {
             let (tx, rx) = broadcast::channel(32);
             let tray_http_client = http_client.clone();
-            std::thread::spawn(move || if let Err(e) = gui_main(tray_http_client, args, tx) {
+            std::thread::spawn(move || if let Err(e) = gui_main(runtime, tray_http_client, args, tx) {
                 nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = main, {e:?}"))
             });
             if let Err(e) = gui::run(http_client, gui::Args::Default { rx }) {
                 nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
             }
         }
-        Some(Subcommand::Launch { no_wait }) => if let Err(e) = gui::run(http_client, gui::Args::Launch { wait: !no_wait }) {
+        Some(Subcommand::Launch { menu, no_wait }) => if let Err(e) = gui::run(http_client, gui::Args::Launch { menu, wait: !no_wait }) {
             nwg::fatal_message(concat!(env!("CARGO_PKG_NAME"), ": fatal error"), &format!("{e}\nDebug info: ctx = gui, {e:?}"))
         },
     }

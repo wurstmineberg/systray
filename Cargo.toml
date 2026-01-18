@@ -43,6 +43,7 @@ tokio = { version = "1.35.1", features = ["process", "rt-multi-thread", "sync", 
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 uuid = { version = "1.19.0", features = ["serde"] }
 wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["gui", "serde_json", "reqwest"] }
+windows = { version = "0.62.2", features = ["UI_StartScreen"] }
 
 [build-dependencies]
 winresource = "0.1"
