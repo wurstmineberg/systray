@@ -245,16 +245,17 @@ pub(crate) enum Message {
 
 struct Gui {
     http_client: reqwest::Client,
+    exit_on_close: bool,
     progress: HashMap<window::Id, &'static str>,
     task: Option<JoinHandle<()>>,
 }
 
 impl Gui {
-    fn new(http_client: reqwest::Client) -> Self {
+    fn new(http_client: reqwest::Client, exit_on_close: bool) -> Self {
         Self {
             progress: HashMap::default(),
             task: None,
-            http_client,
+            http_client, exit_on_close,
         }
     }
 
@@ -282,7 +283,11 @@ impl Gui {
                 }));
                 Task::stream(ReceiverStream::new(rx))
             }
-            Message::LaunchDone(window) => window::close(window),
+            Message::LaunchDone(window) => if self.exit_on_close {
+                iced::exit()
+            } else {
+                window::close(window)
+            },
             Message::LaunchMinecraft { config, state, menu, wait } => window::open(window::Settings {
                 size: Size { width: 512.0, height: 128.0 },
                 icon: icon::from_file_data(include_bytes!("../assets/wurstpick.ico"), Some(::image::ImageFormat::Ico)).ok(),
@@ -327,7 +332,7 @@ pub(crate) fn run(http_client: reqwest::Client, args: Args) -> iced::Result {
 
     let standalone = match args { Args::Default { .. } => None, Args::Launch { menu, wait } => Some((menu, wait)) };
     iced::daemon(move || (
-        Gui::new(http_client.clone()),
+        Gui::new(http_client.clone(), standalone.is_some()),
         if let Some((menu, wait)) = standalone { Task::done(Message::LaunchMinecraft { config: None, state: None, menu, wait }) } else { Task::none() },
     ), Gui::update, Gui::view)
         .title(Gui::title)
