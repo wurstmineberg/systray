@@ -359,6 +359,7 @@ async fn maintain(http_client: reqwest::Client, state: Arc<Mutex<Option<Result<S
 async fn configure_jump_list() -> Result<(), windows::core::Error> {
     let list = JumpList::LoadCurrentAsync()?.await?;
     let items = list.Items()?;
+    items.Clear()?;
     let main_menu_item = JumpListItem::CreateWithArguments(&"launch --menu".into(), &"Minecraft Main Menu".into())?;
     //TODO main_menu_item.SetLogo (how to refer to an embedded resource?)
     items.Append(&main_menu_item)?;
