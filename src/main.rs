@@ -118,9 +118,11 @@ impl SystemTray {
             .map_or(false, |data| matches!(data, registry::Data::U32(1)));
         let (visibility, tooltip) = lock!(@blocking lock = self.state; match *lock {
             Some(Ok((ref people, ref statuses))) => if statuses.values().any(|status| !status.list.is_empty()) || if statuses[MAIN_WORLD].running { self.config.show_if_empty } else { self.config.show_if_offline } {
-                (true, if let Ok(uid) = statuses.values().flat_map(|world| &world.list).exactly_one() {
+                (true, if let Ok((world_name, uid)) = statuses.iter().flat_map(|(world_name, world)| world.list.iter().map(move |uid| (world_name, uid))).exactly_one() {
                     let person = people.get(uid).and_then(|person| person.name.clone()).unwrap_or_else(|| uid.to_string());
-                    format!("{person} is online")
+                    format!("{person} is on {world_name}")
+                } else if let Ok((world_name, world)) = statuses.iter().filter(|(_, world)| !world.list.is_empty()).exactly_one() {
+                    format!("{} players are on {world_name}", world.list.len())
                 } else {
                     format!("{} players are online", statuses.values().map(|world| world.list.len()).sum::<usize>())
                 })
