@@ -148,7 +148,7 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
         }
         cmd.arg(format!("fabric:{}", game_version.unwrap_or_default()));
         cmd.release_create_no_window();
-        cmd.kill_on_drop(true);
+        cmd.kill_on_drop(wait);
         let child = cmd.spawn().at_command("portablemc")?;
         if wait {
             tx.send(Message::Progress(window, "launching Minecraft via new portablemc")).await.allow_unreceived();
@@ -170,7 +170,7 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
         cmd.arg("--login");
         cmd.arg(portablemc_email);
         cmd.release_create_no_window();
-        cmd.kill_on_drop(true);
+        cmd.kill_on_drop(wait);
         let child = cmd.spawn().at_command("python -m portablemc")?;
         if wait {
             tx.send(Message::Progress(window, "launching Minecraft via old portablemc")).await.allow_unreceived();
@@ -182,14 +182,14 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
             prism_command.arg("--show");
             prism_command.arg(instance);
         }
-        match prism_command.release_create_no_window().kill_on_drop(true).spawn() {
+        match prism_command.release_create_no_window().kill_on_drop(wait).spawn() {
             Ok(child) => if wait {
                 tx.send(Message::Progress(window, "launching Minecraft via Prism")).await.allow_unreceived();
                 child.check("prismlauncher").await?;
             },
             Err(e) if e.kind() == io::ErrorKind::NotFound => match Command::new("C:\\Program Files (x86)\\Minecraft Launcher\\MinecraftLauncher.exe")
                 .release_create_no_window()
-                .kill_on_drop(true)
+                .kill_on_drop(wait)
                 .spawn()
             {
                 Ok(child) => if wait {
@@ -200,7 +200,7 @@ async fn launch_minecraft(config: Option<Config>, http_client: &reqwest::Client,
                     let child = Command::new("explorer")
                         .arg("shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")
                         .release_create_no_window()
-                        .kill_on_drop(true)
+                        .kill_on_drop(wait)
                         .spawn().at_command("explorer shell:AppsFolder\\Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft")?;
                     if wait {
                         tx.send(Message::Progress(window, "launching Minecraft via new launcher")).await.allow_unreceived();
