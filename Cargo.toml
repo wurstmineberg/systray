@@ -22,29 +22,30 @@ lto = true
 strip = true
 
 [dependencies]
-clap = { version = "4.4.18", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
 directories = "6"
-futures = "0.3.31"
+futures = "0.3"
 iced = { version = "0.14", default-features = false, features = ["image", "tiny-skia", "tokio"] }
 image = { version = "0.25", default-features = false, features = ["ico"] }
 itertools = "0.14"
-log-lock = { git = "https://github.com/fenhl/log-lock", branch = "main" }
-native-windows-derive = "1.0.5"
-native-windows-gui = { version = "1.0.13", default-features = false, features = ["tray-notification", "high-dpi", "cursor", "message-window", "menu", "notice", "embed-resource"] }
-open = "5.0.1"
-registry = "1.2.3"
+log-lock = { git = "https://github.com/fenhl/log-lock" }
+mimalloc = "0.1"
+native-windows-derive = "1"
+native-windows-gui = { version = "1", default-features = false, features = ["tray-notification", "high-dpi", "cursor", "message-window", "menu", "notice", "embed-resource"] }
+open = "5"
+registry = "1"
 reqwest = { version = "0.13", default-features = false, features = ["charset", "gzip", "http2", "rustls-no-provider", "system-proxy", "zstd"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
-serde = { version = "1.0.196", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = { package = "serde_json_path_to_error", version = "0.1" }
-serenity = { version = "0.12.0", default-features = false }
-smart-default = "0.7.1"
+serenity = { version = "0.12", default-features = false }
+smart-default = "0.7"
 thiserror = "2"
-tokio = { version = "1.35.1", features = ["process", "rt-multi-thread", "sync", "time"] }
-tokio-stream = { version = "0.1.17", features = ["sync"] }
-uuid = { version = "1.19.0", features = ["serde"] }
-wheel = { git = "https://github.com/fenhl/wheel", branch = "main", features = ["gui", "serde_json", "reqwest"] }
-windows = { version = "0.62.2", features = ["UI_StartScreen"] }
+tokio = { version = "1", features = ["process", "rt-multi-thread", "sync", "time"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+uuid = { version = "1", features = ["serde"] }
+wheel = { git = "https://github.com/fenhl/wheel", features = ["gui", "serde_json", "reqwest"] }
+windows = { version = "0.62", features = ["UI_StartScreen"] }
 
 [build-dependencies]
 winresource = "0.1"
