@@ -1,5 +1,9 @@
 #!/usr/bin/env -S cargo +nightly -Zscript
 ---
+[package]
+edition = "2024"
+rust-version = "1.91" # nixpkgs stable
+
 [dependencies]
 cargo_metadata = "0.23"
 directories = "6"
